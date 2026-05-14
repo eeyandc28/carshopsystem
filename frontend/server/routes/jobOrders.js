@@ -147,11 +147,11 @@ router.patch('/:id', async (req, res) => {
         
         if (req.body.status) updates.status = req.body.status;
         if (req.body.description) updates.complaint = req.body.description;
-        if (req.body.diagnosis !== undefined) updates.diagnosis = req.body.diagnosis;
-        if (req.body.repair_action !== undefined) updates.repair_action = req.body.repair_action;
-        if (req.body.promised_at !== undefined) updates.estimated_completion = req.body.promised_at;
-        if (req.body.estimated_cost !== undefined) updates.estimated_cost = req.body.estimated_cost;
-        if (req.body.actual_cost !== undefined) updates.actual_cost = req.body.actual_cost;
+        if (req.body.diagnosis !== undefined) updates.diagnosis = req.body.diagnosis || null;
+        if (req.body.repair_action !== undefined) updates.repair_action = req.body.repair_action || null;
+        if (req.body.promised_at !== undefined) updates.estimated_completion = req.body.promised_at || null;
+        if (req.body.estimated_cost !== undefined) updates.estimated_cost = req.body.estimated_cost || 0;
+        if (req.body.actual_cost !== undefined) updates.actual_cost = req.body.actual_cost || 0;
         
         updates.updated_at = new Date();
 
