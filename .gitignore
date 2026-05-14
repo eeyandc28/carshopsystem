@@ -1,0 +1,13 @@
+# Root gitignore
+**/node_modules
+**/vendor
+**/.env
+**/.env.local
+**/.env.production
+**/storage/*.key
+**/.phpunit.result.cache
+**/.idea
+**/.vscode
+**/dist
+**/public/storage
+**/public/build
