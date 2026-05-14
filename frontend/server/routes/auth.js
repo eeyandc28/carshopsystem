@@ -18,7 +18,7 @@ router.post('/login', async (req, res) => {
         const { data: user, error } = await supabase
             .from('users')
             .select('*')
-            .eq('email', email)
+            .ilike('email', email.toLowerCase().trim())
             .single();
 
         if (error || !user) {

@@ -42,7 +42,7 @@ router.post('/', isAdmin, async (req, res) => {
             .from('users')
             .insert({
                 name,
-                email,
+                email: email.toLowerCase().trim(),
                 password: hashedPassword,
                 role
             })
@@ -67,7 +67,7 @@ router.patch('/:id', isAdmin, async (req, res) => {
         const updates = {};
         
         if (name) updates.name = name;
-        if (email) updates.email = email;
+        if (email) updates.email = email.toLowerCase().trim();
         if (role) updates.role = role;
         if (password) updates.password = await bcrypt.hash(password, 10);
         
