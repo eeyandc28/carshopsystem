@@ -7,21 +7,27 @@ import {
     ClipboardDocumentListIcon, 
     ArchiveBoxIcon, 
     ArrowLeftOnRectangleIcon,
-    ChartBarIcon
+    ChartBarIcon,
+    Cog6ToothIcon
 } from '@heroicons/react/24/outline';
 
 const navigation = [
-    { name: 'Dashboard', href: '/', icon: HomeIcon },
-    { name: 'Customers', href: '/customers', icon: UserGroupIcon },
-    { name: 'Vehicles', href: '/vehicles', icon: TruckIcon },
-    { name: 'Job Orders', href: '/job-orders', icon: ClipboardDocumentListIcon },
-    { name: 'Inventory', href: '/inventory', icon: ArchiveBoxIcon },
-    { name: 'Reports', href: '/reports/sales', icon: ChartBarIcon },
+    { name: 'Dashboard', href: '/', icon: HomeIcon, roles: ['admin', 'service_advisor', 'mechanic'] },
+    { name: 'Customers', href: '/customers', icon: UserGroupIcon, roles: ['admin', 'service_advisor'] },
+    { name: 'Vehicles', href: '/vehicles', icon: TruckIcon, roles: ['admin', 'service_advisor'] },
+    { name: 'Job Orders', href: '/job-orders', icon: ClipboardDocumentListIcon, roles: ['admin', 'service_advisor', 'mechanic'] },
+    { name: 'Inventory', href: '/inventory', icon: ArchiveBoxIcon, roles: ['admin', 'service_advisor'] },
+    { name: 'Reports', href: '/reports/sales', icon: ChartBarIcon, roles: ['admin'] },
+    { name: 'Users', href: '/users', icon: Cog6ToothIcon, roles: ['admin'] },
 ];
 
 const Sidebar = () => {
     const location = useLocation();
     const { logout, user } = useAuthStore();
+
+    const filteredNavigation = navigation.filter(item => 
+        item.roles.includes(user?.role || 'service_advisor')
+    );
 
     return (
         <div className="flex flex-col w-64 bg-slate-900 border-r border-slate-800">
@@ -36,7 +42,7 @@ const Sidebar = () => {
             
             <div className="flex-1 flex flex-col overflow-y-auto py-4">
                 <nav className="flex-1 px-3 space-y-1">
-                    {navigation.map((item) => {
+                    {filteredNavigation.map((item) => {
                         const isActive = location.pathname === item.href;
                         return (
                             <Link
