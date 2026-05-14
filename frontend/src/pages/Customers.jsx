@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { PlusIcon, MagnifyingGlassIcon, ChevronRightIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, MagnifyingGlassIcon, ChevronRightIcon, UserGroupIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 const Customers = () => {
     const navigate = useNavigate();
@@ -108,9 +108,38 @@ const Customers = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <button className="p-2 text-slate-500 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all">
-                                                <ChevronRightIcon className="h-5 w-5" />
-                                            </button>
+                                            <div className="flex justify-end space-x-2">
+                                                <button 
+                                                    onClick={() => navigate(`/customers/edit/${customer.id}`)}
+                                                    className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all"
+                                                    title="Edit Customer"
+                                                >
+                                                    <PencilIcon className="h-5 w-5" />
+                                                </button>
+                                                <button 
+                                                    onClick={async () => {
+                                                        if (window.confirm('Are you sure you want to delete this customer?')) {
+                                                            try {
+                                                                await api.delete(`/customers/${customer.id}`);
+                                                                fetchCustomers();
+                                                            } catch (error) {
+                                                                alert('Failed to delete customer');
+                                                            }
+                                                        }
+                                                    }}
+                                                    className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                                                    title="Delete Customer"
+                                                >
+                                                    <TrashIcon className="h-5 w-5" />
+                                                </button>
+                                                <button 
+                                                    onClick={() => navigate(`/customers/${customer.id}`)}
+                                                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+                                                    title="View Details"
+                                                >
+                                                    <ChevronRightIcon className="h-5 w-5" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

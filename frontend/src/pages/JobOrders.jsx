@@ -148,7 +148,7 @@ const JobOrders = () => {
                                                     <ChevronRightIcon className="h-4 w-4" />
                                                 </button>
                                                 <button 
-                                                    onClick={() => navigate(`/job-orders/${order.id}`)}
+                                                    onClick={() => navigate(`/job-orders/edit/${order.id}`)}
                                                     title="Edit"
                                                     className="p-2 text-slate-500 hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-all"
                                                 >

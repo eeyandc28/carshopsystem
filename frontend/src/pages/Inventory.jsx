@@ -158,7 +158,7 @@ const Inventory = () => {
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end space-x-1">
                                                 <button 
-                                                    onClick={() => navigate(`/inventory/add`)}
+                                                    onClick={() => navigate(`/inventory/edit/${item.id}`)}
                                                     title="Edit"
                                                     className="p-2 text-slate-500 hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-all"
                                                 >

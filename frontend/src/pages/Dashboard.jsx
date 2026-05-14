@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import KpiCard from '../components/ui/KpiCard';
@@ -71,73 +72,109 @@ const Dashboard = () => {
             const completedOrders = orders.filter(o => o.status === 'completed' || o.status === 'released');
             const lowStockItems = inventory.filter(i => i.stock_quantity <= (i.reorder_level || 5));
 
-            let report = '';
-            report += '═══════════════════════════════════════════════════\n';
-            report += '        CAR SHOP MANAGEMENT SYSTEM - REPORT       \n';
-            report += '═══════════════════════════════════════════════════\n';
-            report += `Generated: ${dateStr} at ${timeStr}\n`;
-            report += '───────────────────────────────────────────────────\n\n';
+            const doc = new jsPDF();
 
-            report += '📊 SUMMARY\n';
-            report += '───────────────────────────────────────────────────\n';
-            report += `  Total Customers:      ${customers.length}\n`;
-            report += `  Total Vehicles:       ${vehicles.length}\n`;
-            report += `  Active Job Orders:    ${activeOrders.length}\n`;
-            report += `  Completed Orders:     ${completedOrders.length}\n`;
-            report += `  Inventory Items:      ${inventory.length}\n`;
-            report += `  Low Stock Alerts:     ${lowStockItems.length}\n\n`;
+            // Header
+            doc.setFontSize(22);
+            doc.setTextColor(30, 41, 59); // Slate 800
+            doc.text('Car Shop Management System', 14, 22);
+            
+            doc.setFontSize(12);
+            doc.setTextColor(100, 116, 139); // Slate 500
+            doc.text('System Operations Report', 14, 30);
+            doc.text(`Generated: ${dateStr} at ${timeStr}`, 14, 37);
 
-            report += '🚗 VEHICLES\n';
-            report += '───────────────────────────────────────────────────\n';
-            vehicles.forEach(v => {
-                report += `  ${v.plate_number.padEnd(12)} ${v.brand} ${v.model} (${v.year}) - Owner: ${v.customer?.full_name || 'N/A'}\n`;
+            // Summary Section
+            doc.setFontSize(16);
+            doc.setTextColor(30, 41, 59);
+            doc.text('Performance Summary', 14, 52);
+            
+            autoTable(doc, {
+                startY: 57,
+                head: [['Metric', 'Value']],
+                body: [
+                    ['Total Customers', customers.length.toString()],
+                    ['Total Registered Vehicles', vehicles.length.toString()],
+                    ['Active Job Orders', activeOrders.length.toString()],
+                    ['Completed Job Orders', completedOrders.length.toString()],
+                    ['Total Inventory Items', inventory.length.toString()],
+                    ['Low Stock Alerts', lowStockItems.length.toString()],
+                ],
+                theme: 'striped',
+                headStyles: { fillColor: [30, 41, 59] },
+                margin: { left: 14, right: 14 }
             });
-            report += '\n';
 
-            report += '🔧 JOB ORDERS\n';
-            report += '───────────────────────────────────────────────────\n';
-            if (orders.length === 0) {
-                report += '  No job orders found.\n';
-            } else {
-                orders.forEach(o => {
-                    report += `  ${(o.order_number || 'N/A').padEnd(14)} Status: ${(o.status || 'pending').padEnd(16)} Vehicle: ${o.vehicle?.plate_number || 'N/A'}\n`;
-                    report += `  ${''.padEnd(14)} ${o.description || 'No description'}\n\n`;
-                });
+            // Vehicles Table
+            doc.setFontSize(16);
+            doc.text('Registered Vehicles', 14, doc.lastAutoTable.finalY + 15);
+            
+            autoTable(doc, {
+                startY: doc.lastAutoTable.finalY + 20,
+                head: [['Plate', 'Brand', 'Model', 'Year', 'Owner']],
+                body: vehicles.map(v => [
+                    v.plate_number,
+                    v.brand,
+                    v.model,
+                    v.year.toString(),
+                    v.customer?.full_name || 'N/A'
+                ]),
+                headStyles: { fillColor: [37, 99, 235] }, // Blue 600
+            });
+
+            // Job Orders Table
+            doc.addPage();
+            doc.setFontSize(16);
+            doc.text('Job Orders Status', 14, 22);
+            
+            autoTable(doc, {
+                startY: 27,
+                head: [['Order #', 'Status', 'Vehicle', 'Description']],
+                body: orders.map(o => [
+                    o.order_number || 'N/A',
+                    (o.status || 'pending').toUpperCase(),
+                    o.vehicle?.plate_number || 'N/A',
+                    (o.description || 'No description').slice(0, 50) + (o.description?.length > 50 ? '...' : '')
+                ]),
+                headStyles: { fillColor: [245, 158, 11] }, // Amber 500
+            });
+
+            // Inventory Table
+            doc.setFontSize(16);
+            doc.text('Inventory & Stock', 14, doc.lastAutoTable.finalY + 15);
+            
+            autoTable(doc, {
+                startY: doc.lastAutoTable.finalY + 20,
+                head: [['Item', 'Part #', 'Stock', 'Price', 'Status']],
+                body: inventory.map(i => [
+                    i.name,
+                    i.part_number,
+                    i.stock_quantity.toString(),
+                    `$${i.unit_price}`,
+                    i.stock_quantity <= (i.reorder_level || 5) ? 'LOW STOCK' : 'IN STOCK'
+                ]),
+                headStyles: { fillColor: [16, 185, 129] }, // Emerald 500
+                columnStyles: {
+                    4: { cellWidth: 30, halign: 'center' }
+                },
+                didParseCell: (data) => {
+                    if (data.column.index === 4 && data.cell.text[0] === 'LOW STOCK') {
+                        data.cell.styles.textColor = [220, 38, 38]; // Red 600
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                }
+            });
+
+            // Footer
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(10);
+                doc.setTextColor(148, 163, 184); // Slate 400
+                doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
             }
 
-            report += '📦 INVENTORY\n';
-            report += '───────────────────────────────────────────────────\n';
-            report += `  ${'ITEM'.padEnd(25)} ${'PART #'.padEnd(12)} ${'STOCK'.padEnd(8)} ${'PRICE'.padEnd(10)} STATUS\n`;
-            report += `  ${'─'.repeat(25)} ${'─'.repeat(12)} ${'─'.repeat(8)} ${'─'.repeat(10)} ${'─'.repeat(10)}\n`;
-            inventory.forEach(i => {
-                const status = i.stock_quantity <= (i.reorder_level || 5) ? '⚠ LOW' : '✓ OK';
-                report += `  ${(i.name || '').padEnd(25).slice(0,25)} ${(i.part_number || '').padEnd(12)} ${String(i.stock_quantity).padEnd(8)} $${String(i.unit_price).padEnd(9)} ${status}\n`;
-            });
-            report += '\n';
-
-            if (lowStockItems.length > 0) {
-                report += '⚠️  LOW STOCK ALERTS\n';
-                report += '───────────────────────────────────────────────────\n';
-                lowStockItems.forEach(i => {
-                    report += `  ⚠ ${i.name} (${i.part_number}) - Only ${i.stock_quantity} left (reorder at ${i.reorder_level || 5})\n`;
-                });
-                report += '\n';
-            }
-
-            report += '═══════════════════════════════════════════════════\n';
-            report += '              END OF REPORT                       \n';
-            report += '═══════════════════════════════════════════════════\n';
-
-            // Download as text file
-            const blob = new Blob([report], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `CarShop_Report_${now.toISOString().split('T')[0]}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            doc.save(`CarShop_Report_${now.toISOString().split('T')[0]}.pdf`);
 
         } catch (error) {
             console.error('Failed to generate report', error);

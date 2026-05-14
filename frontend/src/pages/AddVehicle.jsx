@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import api from '../services/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { TruckIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 const schema = yup.object({
@@ -23,9 +23,13 @@ const AddVehicle = () => {
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
     
-    const { register, handleSubmit, formState: { errors } } = useForm({
-        resolver: yupResolver(schema)
+    const { register, handleSubmit, formState: { errors }, setValue } = useForm({
+        resolver: yupResolver(schema),
+        defaultValues: {
+            customer_id: location.state?.customerId || ''
+        }
     });
 
     useEffect(() => {

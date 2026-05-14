@@ -20,6 +20,10 @@ import AddInventory from './pages/AddInventory';
 import JobOrders from './pages/JobOrders';
 import JobOrderDetails from './pages/JobOrderDetails';
 import AddJobOrder from './pages/AddJobOrder';
+import EditCustomer from './pages/EditCustomer';
+import EditJobOrder from './pages/EditJobOrder';
+import EditInventory from './pages/EditInventory';
+import CustomerDetails from './pages/CustomerDetails';
 
 function App() {
     const { fetchUser, isAuthenticated } = useAuthStore();
@@ -39,7 +43,9 @@ function App() {
                     <Route element={<Layout />}>
                         <Route path="/" element={<Dashboard />} />
                         <Route path="/customers" element={<Customers />} />
+                        <Route path="/customers/:id" element={<CustomerDetails />} />
                         <Route path="/customers/add" element={<AddCustomer />} />
+                        <Route path="/customers/edit/:id" element={<EditCustomer />} />
                         <Route path="/vehicles" element={<Vehicles />} />
                         <Route path="/vehicles/:id" element={<VehicleDetails />} />
                         <Route path="/vehicles/:id/edit" element={<EditVehicle />} />
@@ -47,8 +53,10 @@ function App() {
                         <Route path="/job-orders" element={<JobOrders />} />
                         <Route path="/job-orders/:id" element={<JobOrderDetails />} />
                         <Route path="/job-orders/add" element={<AddJobOrder />} />
+                        <Route path="/job-orders/edit/:id" element={<EditJobOrder />} />
                         <Route path="/inventory" element={<Inventory />} />
                         <Route path="/inventory/add" element={<AddInventory />} />
+                        <Route path="/inventory/edit/:id" element={<EditInventory />} />
                     </Route>
                 </Route>
                 

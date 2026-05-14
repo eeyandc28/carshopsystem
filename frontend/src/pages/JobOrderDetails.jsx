@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { 
@@ -9,7 +10,8 @@ import {
     CalendarIcon,
     CurrencyDollarIcon,
     ClockIcon,
-    WrenchIcon
+    WrenchIcon,
+    DocumentTextIcon
 } from '@heroicons/react/24/outline';
 
 const statusSteps = [
@@ -56,8 +58,91 @@ const JobOrderDetails = () => {
         }
     };
 
-    if (loading) return <div className="p-8 text-white">Loading job order...</div>;
-    if (!order) return <div className="p-8 text-white">Job order not found.</div>;
+    const generateInvoice = () => {
+        const doc = new jsPDF();
+        const now = new Date();
+        const dateStr = now.toLocaleDateString();
+
+        // Header
+        doc.setFontSize(22);
+        doc.setTextColor(30, 41, 59);
+        doc.text('SERVICE INVOICE', 14, 22);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100, 116, 139);
+        doc.text('Car Shop Management System', 14, 28);
+        doc.text('123 Service Road, Auto City', 14, 33);
+        
+        // Invoice Info
+        doc.setFontSize(11);
+        doc.setTextColor(30, 41, 59);
+        doc.text(`Invoice #: INV-${order.order_number.split('-')[1]}`, 140, 22);
+        doc.text(`Date: ${dateStr}`, 140, 28);
+        doc.text(`Order #: ${order.order_number}`, 140, 34);
+
+        // Horizontal Line
+        doc.setDrawColor(226, 232, 240);
+        doc.line(14, 40, 196, 40);
+
+        // Bill To / Vehicle Info
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('CUSTOMER DETAILS', 14, 50);
+        doc.text('VEHICLE DETAILS', 110, 50);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(order.customer?.full_name || 'N/A', 14, 57);
+        doc.text(order.customer?.contact_number || 'N/A', 14, 62);
+        doc.text(order.customer?.address || 'N/A', 14, 67, { maxWidth: 80 });
+
+        doc.text(`Plate: ${order.vehicle?.plate_number}`, 110, 57);
+        doc.text(`Unit: ${order.vehicle?.brand} ${order.vehicle?.model} (${order.vehicle?.year})`, 110, 62);
+        doc.text(`VIN: ${order.vehicle?.vin || 'N/A'}`, 110, 67);
+
+        // Service Table
+        autoTable(doc, {
+            startY: 80,
+            head: [['Service Description', 'Status', 'Total']],
+            body: [
+                [
+                    { content: `LABOR: ${order.description}\n\nDiagnosis:\n${order.diagnosis || 'Pending diagnosis'}`, styles: { minCellHeight: 40 } },
+                    order.status.toUpperCase().replace('_', ' '),
+                    `$${(order.estimated_cost || 0).toLocaleString()}`
+                ]
+            ],
+            theme: 'grid',
+            headStyles: { fillColor: [30, 41, 59], fontStyle: 'bold' },
+            columnStyles: {
+                0: { cellWidth: 120 },
+                1: { halign: 'center' },
+                2: { halign: 'right', fontStyle: 'bold' }
+            }
+        });
+
+        // Summary
+        const finalY = doc.lastAutoTable.finalY + 10;
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('TOTAL DUE:', 140, finalY);
+        doc.text(`$${(order.estimated_cost || 0).toLocaleString()}`, 196, finalY, { align: 'right' });
+
+        // Notes
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(100, 116, 139);
+        doc.text('Thank you for your business! Please keep this invoice for your warranty records.', 14, finalY + 20);
+
+        // Footer
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text('System Generated Invoice', doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+
+        doc.save(`Invoice_${order.order_number}.pdf`);
+    };
+
+    if (loading) return <div className="p-8 text-white text-center">Loading job order...</div>;
+    if (!order) return <div className="p-8 text-white text-center">Job order not found.</div>;
 
     return (
         <div className="space-y-6">
@@ -80,10 +165,17 @@ const JobOrderDetails = () => {
                     <p className="text-slate-400">Created on {new Date(order.created_at).toLocaleDateString()}</p>
                 </div>
                 <div className="flex space-x-3">
-                    <button className="px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition-all text-sm font-semibold">
+                    <button 
+                        onClick={generateInvoice}
+                        className="flex items-center px-4 py-2 bg-slate-800 text-white rounded-xl border border-slate-700 hover:bg-slate-700 transition-all text-sm font-semibold"
+                    >
+                        <DocumentTextIcon className="h-4 w-4 mr-2" />
                         Generate Invoice
                     </button>
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all text-sm font-semibold shadow-lg shadow-blue-500/20">
+                    <button 
+                        onClick={() => navigate(`/job-orders/edit/${id}`)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all text-sm font-semibold shadow-lg shadow-blue-500/20"
+                    >
                         Edit Order
                     </button>
                 </div>
