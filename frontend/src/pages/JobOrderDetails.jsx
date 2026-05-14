@@ -258,7 +258,7 @@ const JobOrderDetails = () => {
             </div>
 
             {/* Status Progress Bar */}
-            <div className="bg-slate-900 p-8 rounded-2xl border border-slate-800 shadow-xl overflow-x-auto">
+            <div className="bg-slate-900 p-4 sm:p-6 rounded-2xl border border-slate-800 shadow-lg overflow-x-auto">
                 <div className="flex items-center min-w-[800px]">
                     {statusSteps.map((step, index) => {
                         const isCurrent = order.status === step.id;
@@ -510,7 +510,7 @@ const JobOrderDetails = () => {
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Quantity</label>
                                     <input 

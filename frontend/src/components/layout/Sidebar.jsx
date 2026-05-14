@@ -8,7 +8,8 @@ import {
     ArchiveBoxIcon, 
     ArrowLeftOnRectangleIcon,
     ChartBarIcon,
-    Cog6ToothIcon
+    Cog6ToothIcon,
+    XMarkIcon
 } from '@heroicons/react/24/outline';
 
 const navigation = [
@@ -21,7 +22,7 @@ const navigation = [
     { name: 'Users', href: '/users', icon: Cog6ToothIcon, roles: ['admin'] },
 ];
 
-const Sidebar = () => {
+const Sidebar = ({ onClose }) => {
     const location = useLocation();
     const { logout, user } = useAuthStore();
 
@@ -30,14 +31,19 @@ const Sidebar = () => {
     );
 
     return (
-        <div className="flex flex-col w-64 bg-slate-900 border-r border-slate-800">
-            <div className="flex items-center h-16 px-6 border-b border-slate-800">
-                <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
-                    <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
+        <div className="flex flex-col h-full bg-slate-900 border-r border-slate-800">
+            <div className="flex items-center justify-between h-16 px-6 border-b border-slate-800">
+                <div className="flex items-center">
+                    <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <span className="ml-3 text-lg font-bold text-white tracking-tight">CarShop ERP</span>
                 </div>
-                <span className="ml-3 text-lg font-bold text-white tracking-tight">CarShop ERP</span>
+                <button onClick={onClose} className="lg:hidden text-slate-500 hover:text-white">
+                    <XMarkIcon className="h-6 w-6" />
+                </button>
             </div>
             
             <div className="flex-1 flex flex-col overflow-y-auto py-4">
@@ -48,6 +54,7 @@ const Sidebar = () => {
                             <Link
                                 key={item.name}
                                 to={item.href}
+                                onClick={onClose}
                                 className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all ${
                                     isActive 
                                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 

@@ -1,6 +1,6 @@
 const KpiCard = ({ title, value, icon: Icon, trend, colorClass }) => {
     return (
-        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-lg">
+        <div className="bg-slate-900 p-4 sm:p-6 rounded-2xl border border-slate-800 shadow-lg">
             <div className="flex items-center justify-between">
                 <div>
                     <p className="text-sm font-medium text-slate-400">{title}</p>
