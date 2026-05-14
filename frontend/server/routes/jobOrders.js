@@ -263,6 +263,19 @@ router.post('/:id/items', async (req, res) => {
                     .from('inventories')
                     .update({ stock_quantity: inv.stock_quantity - quantity })
                     .eq('id', inventory_id);
+                
+                // Log Movement
+                await supabase
+                    .from('stock_movements')
+                    .insert({
+                        inventory_id: inventory_id,
+                        transaction_type: 'OUT',
+                        quantity: quantity,
+                        reference_id: req.params.id,
+                        reference_type: 'JobOrder',
+                        balance_after: inv.stock_quantity - quantity,
+                        notes: `Used in Job Order #${req.params.id}`
+                    });
             }
         }
 
@@ -317,6 +330,19 @@ router.delete('/items/:itemId', async (req, res) => {
                     .from('inventories')
                     .update({ stock_quantity: inv.stock_quantity + item.quantity })
                     .eq('id', item.inventory_id);
+                
+                // Log Movement
+                await supabase
+                    .from('stock_movements')
+                    .insert({
+                        inventory_id: item.inventory_id,
+                        transaction_type: 'IN',
+                        quantity: item.quantity,
+                        reference_id: item.job_order_id.toString(),
+                        reference_type: 'JobOrderReturn',
+                        balance_after: inv.stock_quantity + item.quantity,
+                        notes: `Returned from Job Order #${item.job_order_id}`
+                    });
             }
         }
 

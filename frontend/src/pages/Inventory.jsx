@@ -7,7 +7,8 @@ import {
     ArchiveBoxIcon, 
     ExclamationTriangleIcon,
     PencilSquareIcon,
-    TrashIcon
+    TrashIcon,
+    ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline';
 
 const Inventory = () => {
@@ -157,6 +158,13 @@ const Inventory = () => {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end space-x-1">
+                                                <button 
+                                                    onClick={() => navigate(`/inventory/stock-card/${item.id}`)}
+                                                    title="View Stock Card"
+                                                    className="p-2 text-slate-500 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all"
+                                                >
+                                                    <ClipboardDocumentListIcon className="h-4 w-4" />
+                                                </button>
                                                 <button 
                                                     onClick={() => navigate(`/inventory/edit/${item.id}`)}
                                                     title="Edit"
