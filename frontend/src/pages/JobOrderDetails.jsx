@@ -12,7 +12,10 @@ import {
     CurrencyDollarIcon,
     ClockIcon,
     WrenchIcon,
-    DocumentTextIcon
+    DocumentTextIcon,
+    PlusIcon,
+    TrashIcon,
+    XMarkIcon
 } from '@heroicons/react/24/outline';
 
 const statusSteps = [
@@ -28,11 +31,23 @@ const JobOrderDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [order, setOrder] = useState(null);
+    const [orderItems, setOrderItems] = useState([]);
+    const [inventory, setInventory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
+    const [showItemModal, setShowItemModal] = useState(false);
+    const [newItem, setNewItem] = useState({
+        item_type: 'part',
+        inventory_id: '',
+        description: '',
+        quantity: 1,
+        unit_price: 0
+    });
 
     useEffect(() => {
         fetchOrderDetails();
+        fetchOrderItems();
+        fetchInventory();
     }, [id]);
 
     const fetchOrderDetails = async () => {
@@ -43,6 +58,60 @@ const JobOrderDetails = () => {
             console.error('Failed to fetch job order details', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchOrderItems = async () => {
+        try {
+            const response = await api.get(`/job-orders/${id}/items`);
+            setOrderItems(response.data.data);
+        } catch (error) {
+            console.error('Failed to fetch items', error);
+        }
+    };
+
+    const fetchInventory = async () => {
+        try {
+            const response = await api.get('/inventory');
+            setInventory(response.data.data);
+        } catch (error) {
+            console.error('Failed to fetch inventory', error);
+        }
+    };
+
+    const addItem = async (e) => {
+        e.preventDefault();
+        setUpdating(true);
+        try {
+            await api.post(`/job-orders/${id}/items`, newItem);
+            setShowItemModal(false);
+            setNewItem({
+                item_type: 'part',
+                inventory_id: '',
+                description: '',
+                quantity: 1,
+                unit_price: 0
+            });
+            fetchOrderItems();
+            fetchOrderDetails();
+        } catch (error) {
+            alert('Failed to add item');
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    const deleteItem = async (itemId) => {
+        if (!window.confirm('Remove this item?')) return;
+        setUpdating(true);
+        try {
+            await api.delete(`/job-orders/items/${itemId}`);
+            fetchOrderItems();
+            fetchOrderDetails();
+        } catch (error) {
+            alert('Failed to delete item');
+        } finally {
+            setUpdating(false);
         }
     };
 
@@ -102,22 +171,28 @@ const JobOrderDetails = () => {
         doc.text(`VIN: ${order.vehicle?.vin || 'N/A'}`, 110, 67);
 
         // Service Table
+        const tableBody = orderItems.map(item => [
+            item.description,
+            item.quantity,
+            `$${parseFloat(item.unit_price).toLocaleString()}`,
+            `$${parseFloat(item.total_price).toLocaleString()}`
+        ]);
+
+        if (tableBody.length === 0) {
+            tableBody.push([{ content: 'No parts or services recorded.', colSpan: 4, styles: { halign: 'center' } }]);
+        }
+
         autoTable(doc, {
             startY: 80,
-            head: [['Service Description', 'Status', 'Total']],
-            body: [
-                [
-                    { content: `LABOR: ${order.description}\n\nDiagnosis:\n${order.diagnosis || 'Pending diagnosis'}`, styles: { minCellHeight: 40 } },
-                    order.status.toUpperCase().replace('_', ' '),
-                    `$${(order.actual_cost || order.estimated_cost || 0).toLocaleString()}`
-                ]
-            ],
+            head: [['Description', 'Qty', 'Unit Price', 'Total']],
+            body: tableBody,
             theme: 'grid',
             headStyles: { fillColor: [30, 41, 59], fontStyle: 'bold' },
             columnStyles: {
-                0: { cellWidth: 120 },
+                0: { cellWidth: 90 },
                 1: { halign: 'center' },
-                2: { halign: 'right', fontStyle: 'bold' }
+                2: { halign: 'right' },
+                3: { halign: 'right', fontStyle: 'bold' }
             }
         });
 
@@ -191,15 +266,12 @@ const JobOrderDetails = () => {
                         
                         return (
                             <div key={step.id} className="flex-1 flex flex-col items-center relative">
-                                {/* Line */}
                                 {index !== 0 && (
                                     <div className={`absolute left-0 right-1/2 top-4 h-0.5 -translate-y-1/2 ${isPast ? 'bg-blue-500' : 'bg-slate-800'}`}></div>
                                 )}
                                 {index !== statusSteps.length - 1 && (
                                     <div className={`absolute right-0 left-1/2 top-4 h-0.5 -translate-y-1/2 ${isPast && order.status !== step.id ? 'bg-blue-500' : 'bg-slate-800'}`}></div>
                                 )}
-                                
-                                {/* Node */}
                                 <button 
                                     disabled={updating}
                                     onClick={() => updateStatus(step.id)}
@@ -224,8 +296,8 @@ const JobOrderDetails = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Details Column */}
                 <div className="lg:col-span-2 space-y-6">
+                    {/* Work Description */}
                     <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 shadow-xl">
                         <h3 className="text-white font-bold mb-6 flex items-center">
                             <WrenchIcon className="h-5 w-5 mr-2 text-blue-400" />
@@ -245,21 +317,69 @@ const JobOrderDetails = () => {
                         </div>
                     </div>
 
+                    {/* Parts & Services Table */}
                     <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 shadow-xl">
-                        <h3 className="text-white font-bold mb-6 flex items-center">
-                            <ClipboardDocumentListIcon className="h-5 w-5 mr-2 text-blue-400" />
-                            Used Parts & Labor (Future Implementation)
-                        </h3>
-                        <div className="p-8 border-2 border-dashed border-slate-800 rounded-2xl text-center">
-                            <p className="text-slate-500">Add parts from inventory to this job order.</p>
-                            <button className="mt-4 text-blue-400 font-semibold hover:text-blue-300">+ Add Parts</button>
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-white font-bold flex items-center">
+                                <ClipboardDocumentListIcon className="h-5 w-5 mr-2 text-blue-400" />
+                                Parts & Services
+                            </h3>
+                            <button 
+                                onClick={() => setShowItemModal(true)}
+                                className="text-sm font-bold text-blue-400 hover:text-blue-300 flex items-center bg-blue-400/5 px-3 py-1.5 rounded-lg border border-blue-400/10 transition-all"
+                            >
+                                <PlusIcon className="h-4 w-4 mr-1" />
+                                Add Item
+                            </button>
+                        </div>
+                        
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead>
+                                    <tr className="text-slate-500 text-xs uppercase tracking-wider border-b border-slate-800">
+                                        <th className="pb-4 font-semibold">Description</th>
+                                        <th className="pb-4 font-semibold text-center">Qty</th>
+                                        <th className="pb-4 font-semibold text-right">Price</th>
+                                        <th className="pb-4 font-semibold text-right">Total</th>
+                                        <th className="pb-4"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800">
+                                    {orderItems.length > 0 ? (
+                                        orderItems.map((item) => (
+                                            <tr key={item.id} className="group">
+                                                <td className="py-4">
+                                                    <p className="text-white text-sm font-medium">{item.description}</p>
+                                                    <p className="text-[10px] text-slate-500 uppercase tracking-widest">{item.item_type}</p>
+                                                </td>
+                                                <td className="py-4 text-center text-slate-300 text-sm">{item.quantity}</td>
+                                                <td className="py-4 text-right text-slate-300 text-sm">${parseFloat(item.unit_price).toLocaleString()}</td>
+                                                <td className="py-4 text-right text-white font-semibold text-sm">${parseFloat(item.total_price).toLocaleString()}</td>
+                                                <td className="py-4 text-right">
+                                                    <button 
+                                                        onClick={() => deleteItem(item.id)}
+                                                        className="p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                                                    >
+                                                        <TrashIcon className="h-4 w-4" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="5" className="py-12 text-center">
+                                                <p className="text-slate-500 text-sm italic">No parts or services added yet.</p>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
-                {/* Sidebar Column */}
+                {/* Sidebar */}
                 <div className="space-y-6">
-                    {/* Vehicle & Customer Info */}
                     <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-xl space-y-6">
                         <div>
                             <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-3">Vehicle</p>
@@ -288,7 +408,6 @@ const JobOrderDetails = () => {
                         </div>
                     </div>
 
-                    {/* Meta Info */}
                     <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-xl space-y-4">
                         <div className="flex items-center justify-between">
                             <span className="flex items-center text-slate-400 text-sm">
@@ -322,6 +441,120 @@ const JobOrderDetails = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Modal */}
+            {showItemModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+                        <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-900">
+                            <h3 className="text-lg font-bold text-white">Add Part or Service</h3>
+                            <button onClick={() => setShowItemModal(false)} className="text-slate-500 hover:text-white">
+                                <XMarkIcon className="h-6 w-6" />
+                            </button>
+                        </div>
+                        <form onSubmit={addItem} className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Item Type</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setNewItem({...newItem, item_type: 'part', inventory_id: '', description: '', unit_price: 0})}
+                                        className={`py-2 rounded-lg text-sm font-semibold transition-all ${newItem.item_type === 'part' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}
+                                    >
+                                        Part / Stock
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setNewItem({...newItem, item_type: 'labor', inventory_id: '', description: '', unit_price: 0})}
+                                        className={`py-2 rounded-lg text-sm font-semibold transition-all ${newItem.item_type === 'labor' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}
+                                    >
+                                        Labor / Service
+                                    </button>
+                                </div>
+                            </div>
+
+                            {newItem.item_type === 'part' ? (
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Select Part</label>
+                                    <select 
+                                        required
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={newItem.inventory_id}
+                                        onChange={(e) => {
+                                            const item = inventory.find(i => i.id == e.target.value);
+                                            setNewItem({
+                                                ...newItem, 
+                                                inventory_id: e.target.value,
+                                                description: item ? item.name : '',
+                                                unit_price: item ? item.unit_price : 0
+                                            });
+                                        }}
+                                    >
+                                        <option value="">-- Select Inventory --</option>
+                                        {inventory.map(i => (
+                                            <option key={i.id} value={i.id}>{i.name} (${i.unit_price}) - Stock: {i.stock_quantity}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Service Description</label>
+                                    <input 
+                                        required
+                                        type="text"
+                                        placeholder="e.g. Engine Wash, Diagnostic Fee"
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={newItem.description}
+                                        onChange={(e) => setNewItem({...newItem, description: e.target.value})}
+                                    />
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Quantity</label>
+                                    <input 
+                                        required
+                                        type="number"
+                                        step="0.1"
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={newItem.quantity}
+                                        onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Unit Price ($)</label>
+                                    <input 
+                                        required
+                                        type="number"
+                                        step="0.01"
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={newItem.unit_price}
+                                        onChange={(e) => setNewItem({...newItem, unit_price: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="pt-6 border-t border-slate-800 flex justify-end space-x-3">
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowItemModal(false)}
+                                    className="px-6 py-2.5 text-sm font-semibold text-slate-400 hover:text-white transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="submit"
+                                    disabled={updating}
+                                    className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                                >
+                                    {updating ? 'Adding...' : 'Add to Order'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

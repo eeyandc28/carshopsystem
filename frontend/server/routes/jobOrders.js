@@ -212,4 +212,131 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+// GET /job-orders/:id/items
+router.get('/:id/items', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('job_order_items')
+            .select('*')
+            .eq('job_order_id', req.params.id)
+            .order('created_at', { ascending: true });
+
+        if (error) throw error;
+        res.json({ data });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to fetch items', error: err.message });
+    }
+});
+
+// POST /job-orders/:id/items
+router.post('/:id/items', async (req, res) => {
+    try {
+        const { item_type, description, quantity, unit_price, inventory_id } = req.body;
+        const totalPrice = parseFloat(quantity) * parseFloat(unit_price);
+
+        const { data: item, error } = await supabase
+            .from('job_order_items')
+            .insert({
+                job_order_id: req.params.id,
+                inventory_id: inventory_id || null,
+                item_type,
+                description,
+                quantity,
+                unit_price,
+                total_price: totalPrice
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        // If it's a part, decrease inventory stock
+        if (item_type === 'part' && inventory_id) {
+            const { data: inv } = await supabase
+                .from('inventories')
+                .select('stock_quantity')
+                .eq('id', inventory_id)
+                .single();
+            
+            if (inv) {
+                await supabase
+                    .from('inventories')
+                    .update({ stock_quantity: inv.stock_quantity - quantity })
+                    .eq('id', inventory_id);
+            }
+        }
+
+        // Update actual_cost in job_orders
+        const { data: allItems } = await supabase
+            .from('job_order_items')
+            .select('total_price')
+            .eq('job_order_id', req.params.id);
+        
+        const totalActualCost = (allItems || []).reduce((sum, i) => sum + parseFloat(i.total_price), 0);
+        
+        await supabase
+            .from('job_orders')
+            .update({ actual_cost: totalActualCost })
+            .eq('id', req.params.id);
+
+        res.status(201).json({ data: item });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to add item', error: err.message });
+    }
+});
+
+// DELETE /job-orders/items/:itemId
+router.delete('/items/:itemId', async (req, res) => {
+    try {
+        // Get item info first to know the job_order_id and inventory_id
+        const { data: item } = await supabase
+            .from('job_order_items')
+            .select('*')
+            .eq('id', req.params.itemId)
+            .single();
+
+        if (!item) return res.status(404).json({ message: 'Item not found' });
+
+        const { error } = await supabase
+            .from('job_order_items')
+            .delete()
+            .eq('id', req.params.itemId);
+
+        if (error) throw error;
+
+        // If it was a part, restore inventory stock
+        if (item.item_type === 'part' && item.inventory_id) {
+            const { data: inv } = await supabase
+                .from('inventories')
+                .select('stock_quantity')
+                .eq('id', item.inventory_id)
+                .single();
+            
+            if (inv) {
+                await supabase
+                    .from('inventories')
+                    .update({ stock_quantity: inv.stock_quantity + item.quantity })
+                    .eq('id', item.inventory_id);
+            }
+        }
+
+        // Update actual_cost in job_orders
+        const { data: allItems } = await supabase
+            .from('job_order_items')
+            .select('total_price')
+            .eq('job_order_id', item.job_order_id);
+        
+        const totalActualCost = (allItems || []).reduce((sum, i) => sum + parseFloat(i.total_price), 0);
+        
+        await supabase
+            .from('job_orders')
+            .update({ actual_cost: totalActualCost })
+            .eq('id', item.job_order_id);
+
+        res.status(204).send();
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to delete item', error: err.message });
+    }
+});
+
 module.exports = router;
