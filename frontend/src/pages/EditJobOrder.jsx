@@ -12,6 +12,7 @@ const schema = yup.object({
     repair_action: yup.string().nullable(),
     status: yup.string().required('Status is required'),
     estimated_cost: yup.number().typeError('Must be a number').nullable(),
+    actual_cost: yup.number().typeError('Must be a number').nullable(),
     promised_at: yup.string().nullable(),
 }).required();
 
@@ -157,14 +158,25 @@ const EditJobOrder = () => {
                         ></textarea>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Estimated Cost ($)</label>
-                        <input 
-                            type="number" 
-                            step="0.01"
-                            {...register('estimated_cost')} 
-                            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
-                        />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Estimated Cost ($)</label>
+                            <input 
+                                type="number" 
+                                step="0.01"
+                                {...register('estimated_cost')} 
+                                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Actual Cost ($)</label>
+                            <input 
+                                type="number" 
+                                step="0.01"
+                                {...register('actual_cost')} 
+                                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
+                            />
+                        </div>
                     </div>
 
                     <div className="pt-6 border-t border-slate-800 flex justify-end space-x-4">

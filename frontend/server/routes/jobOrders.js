@@ -29,6 +29,8 @@ router.get('/', async (req, res) => {
             diagnosis: order.diagnosis,
             repair_action: order.repair_action,
             promised_at: order.estimated_completion,
+            estimated_cost: order.estimated_cost,
+            actual_cost: order.actual_cost,
             customer: order.vehicle?.customer || null,
             vehicle: order.vehicle ? {
                 id: order.vehicle.id,
@@ -51,7 +53,7 @@ router.get('/', async (req, res) => {
 // POST /job-orders
 router.post('/', async (req, res) => {
     try {
-        const { vehicle_id, description, promised_at } = req.body;
+        const { vehicle_id, description, promised_at, estimated_cost } = req.body;
 
         if (!vehicle_id || !description) {
             return res.status(422).json({ message: 'Vehicle and description are required' });
@@ -67,7 +69,8 @@ router.post('/', async (req, res) => {
                 service_advisor_id: req.user.id,
                 complaint: description,
                 status: 'pending',
-                estimated_completion: promised_at || null
+                estimated_completion: promised_at || null,
+                estimated_cost: estimated_cost || 0
             })
             .select(`
                 *,
@@ -84,6 +87,8 @@ router.post('/', async (req, res) => {
                 order_number: data.job_order_number,
                 status: data.status,
                 description: data.complaint,
+                estimated_cost: data.estimated_cost,
+                actual_cost: data.actual_cost,
                 customer: data.vehicle?.customer || null,
                 vehicle: data.vehicle,
                 advisor: data.service_advisor,
@@ -121,6 +126,8 @@ router.get('/:id', async (req, res) => {
                 diagnosis: order.diagnosis,
                 repair_action: order.repair_action,
                 promised_at: order.estimated_completion,
+                estimated_cost: order.estimated_cost,
+                actual_cost: order.actual_cost,
                 customer: order.vehicle?.customer || null,
                 vehicle: order.vehicle,
                 advisor: order.service_advisor,
@@ -143,6 +150,8 @@ router.patch('/:id', async (req, res) => {
         if (req.body.diagnosis !== undefined) updates.diagnosis = req.body.diagnosis;
         if (req.body.repair_action !== undefined) updates.repair_action = req.body.repair_action;
         if (req.body.promised_at !== undefined) updates.estimated_completion = req.body.promised_at;
+        if (req.body.estimated_cost !== undefined) updates.estimated_cost = req.body.estimated_cost;
+        if (req.body.actual_cost !== undefined) updates.actual_cost = req.body.actual_cost;
         
         updates.updated_at = new Date();
 
@@ -168,6 +177,8 @@ router.patch('/:id', async (req, res) => {
                 diagnosis: data.diagnosis,
                 repair_action: data.repair_action,
                 promised_at: data.estimated_completion,
+                estimated_cost: data.estimated_cost,
+                actual_cost: data.actual_cost,
                 customer: data.vehicle?.customer || null,
                 vehicle: data.vehicle,
                 advisor: data.service_advisor,

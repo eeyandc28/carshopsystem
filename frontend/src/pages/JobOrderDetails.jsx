@@ -109,7 +109,7 @@ const JobOrderDetails = () => {
                 [
                     { content: `LABOR: ${order.description}\n\nDiagnosis:\n${order.diagnosis || 'Pending diagnosis'}`, styles: { minCellHeight: 40 } },
                     order.status.toUpperCase().replace('_', ' '),
-                    `$${(order.estimated_cost || 0).toLocaleString()}`
+                    `$${(order.actual_cost || order.estimated_cost || 0).toLocaleString()}`
                 ]
             ],
             theme: 'grid',
@@ -126,7 +126,7 @@ const JobOrderDetails = () => {
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text('TOTAL DUE:', 140, finalY);
-        doc.text(`$${(order.estimated_cost || 0).toLocaleString()}`, 196, finalY, { align: 'right' });
+        doc.text(`$${(order.actual_cost || order.estimated_cost || 0).toLocaleString()}`, 196, finalY, { align: 'right' });
 
         // Notes
         doc.setFontSize(10);
@@ -308,6 +308,17 @@ const JobOrderDetails = () => {
                                 ${order.estimated_cost?.toLocaleString() || '0.00'}
                             </span>
                         </div>
+                        {order.actual_cost > 0 && (
+                            <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+                                <span className="flex items-center text-emerald-400 text-sm">
+                                    <CurrencyDollarIcon className="h-4 w-4 mr-2" />
+                                    Actual Cost
+                                </span>
+                                <span className="text-emerald-400 text-sm font-bold">
+                                    ${order.actual_cost?.toLocaleString()}
+                                </span>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
