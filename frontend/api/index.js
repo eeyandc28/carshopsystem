@@ -7,6 +7,7 @@ const customerRoutes = require('../server/routes/customers');
 const vehicleRoutes = require('../server/routes/vehicles');
 const inventoryRoutes = require('../server/routes/inventory');
 const jobOrderRoutes = require('../server/routes/jobOrders');
+const reportRoutes = require('../server/routes/reports');
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use('/api/v1/customers', auth, customerRoutes);
 app.use('/api/v1/vehicles', auth, vehicleRoutes);
 app.use('/api/v1/inventory', auth, inventoryRoutes);
 app.use('/api/v1/job-orders', auth, jobOrderRoutes);
+app.use('/api/v1/reports', auth, reportRoutes);
 
 // GET /api/v1/user
 app.get('/api/v1/user', auth, async (req, res) => {

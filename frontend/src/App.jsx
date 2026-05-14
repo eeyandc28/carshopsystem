@@ -25,6 +25,7 @@ import EditJobOrder from './pages/EditJobOrder';
 import EditInventory from './pages/EditInventory';
 import CustomerDetails from './pages/CustomerDetails';
 import StockCard from './pages/StockCard';
+import SalesReport from './pages/SalesReport';
 
 function App() {
     const { fetchUser, isAuthenticated } = useAuthStore();
@@ -59,6 +60,7 @@ function App() {
                         <Route path="/inventory/add" element={<AddInventory />} />
                         <Route path="/inventory/edit/:id" element={<EditInventory />} />
                         <Route path="/inventory/stock-card/:id" element={<StockCard />} />
+                        <Route path="/reports/sales" element={<SalesReport />} />
                     </Route>
                 </Route>
                 

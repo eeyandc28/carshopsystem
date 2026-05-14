@@ -6,7 +6,8 @@ import {
     TruckIcon, 
     ClipboardDocumentListIcon, 
     ArchiveBoxIcon, 
-    ArrowLeftOnRectangleIcon 
+    ArrowLeftOnRectangleIcon,
+    ChartBarIcon
 } from '@heroicons/react/24/outline';
 
 const navigation = [
@@ -15,6 +16,7 @@ const navigation = [
     { name: 'Vehicles', href: '/vehicles', icon: TruckIcon },
     { name: 'Job Orders', href: '/job-orders', icon: ClipboardDocumentListIcon },
     { name: 'Inventory', href: '/inventory', icon: ArchiveBoxIcon },
+    { name: 'Reports', href: '/reports/sales', icon: ChartBarIcon },
 ];
 
 const Sidebar = () => {
