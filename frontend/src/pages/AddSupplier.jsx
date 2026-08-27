@@ -11,7 +11,6 @@ const schema = yup.object({
     contact_person: yup.string().nullable(),
     contact_number: yup.string().nullable(),
     email: yup.string().email('Must be a valid email').nullable(),
-    address: yup.string().nullable(),
 }).required();
 
 const AddSupplier = () => {
@@ -81,12 +80,6 @@ const AddSupplier = () => {
                         <label className="block text-sm font-medium text-slate-300 mb-2">Email Address</label>
                         <input type="email" {...register('email')} className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="contact@supplier.com" />
                         {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>}
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Address</label>
-                        <textarea {...register('address')} rows="3" className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="123 Supplier Street..."></textarea>
-                        {errors.address && <p className="mt-1 text-xs text-red-400">{errors.address.message}</p>}
                     </div>
 
                     <div className="pt-6 border-t border-slate-800 flex justify-end space-x-4">

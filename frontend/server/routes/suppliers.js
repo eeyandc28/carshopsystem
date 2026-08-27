@@ -21,7 +21,7 @@ router.get('/', async (req, res) => {
 // POST /suppliers
 router.post('/', async (req, res) => {
     try {
-        const { name, contact_person, contact_number, email, address } = req.body;
+        const { name, contact_person, contact_number, email } = req.body;
 
         if (!name) {
             return res.status(422).json({ message: 'Supplier name is required' });
@@ -29,7 +29,7 @@ router.post('/', async (req, res) => {
 
         const { data, error } = await supabase
             .from('suppliers')
-            .insert({ name, contact_person, contact_number, email, address })
+            .insert({ name, contact_person, contact_number, email })
             .select('*')
             .single();
 
@@ -59,7 +59,7 @@ router.get('/:id', async (req, res) => {
 // PUT /suppliers/:id
 router.put('/:id', async (req, res) => {
     try {
-        const { name, contact_person, contact_number, email, address } = req.body;
+        const { name, contact_person, contact_number, email } = req.body;
 
         if (!name) {
             return res.status(422).json({ message: 'Supplier name is required' });
@@ -67,7 +67,7 @@ router.put('/:id', async (req, res) => {
 
         const { data, error } = await supabase
             .from('suppliers')
-            .update({ name, contact_person, contact_number, email, address })
+            .update({ name, contact_person, contact_number, email })
             .eq('id', req.params.id)
             .select('*')
             .single();
