@@ -18,6 +18,7 @@ const navigation = [
     { name: 'Vehicles', href: '/vehicles', icon: TruckIcon, roles: ['admin', 'service_advisor'] },
     { name: 'Job Orders', href: '/job-orders', icon: ClipboardDocumentListIcon, roles: ['admin', 'service_advisor', 'mechanic'] },
     { name: 'Inventory', href: '/inventory', icon: ArchiveBoxIcon, roles: ['admin', 'service_advisor'] },
+    { name: 'Suppliers', href: '/suppliers', icon: TruckIcon, roles: ['admin', 'service_advisor'] },
     { name: 'Reports', href: '/reports/sales', icon: ChartBarIcon, roles: ['admin'] },
     { name: 'Users', href: '/users', icon: Cog6ToothIcon, roles: ['admin'] },
 ];

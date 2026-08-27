@@ -16,7 +16,9 @@ import VehicleDetails from './pages/VehicleDetails';
 import AddVehicle from './pages/AddVehicle';
 import EditVehicle from './pages/EditVehicle';
 import Inventory from './pages/Inventory';
+import Suppliers from './pages/Suppliers';
 import AddInventory from './pages/AddInventory';
+import AddSupplier from './pages/AddSupplier';
 import JobOrders from './pages/JobOrders';
 import JobOrderDetails from './pages/JobOrderDetails';
 import AddJobOrder from './pages/AddJobOrder';
@@ -58,7 +60,9 @@ function App() {
                         <Route path="/job-orders/add" element={<AddJobOrder />} />
                         <Route path="/job-orders/edit/:id" element={<EditJobOrder />} />
                         <Route path="/inventory" element={<Inventory />} />
+                        <Route path="/suppliers" element={<Suppliers />} />
                         <Route path="/inventory/add" element={<AddInventory />} />
+                        <Route path="/suppliers/add" element={<AddSupplier />} />
                         <Route path="/inventory/edit/:id" element={<EditInventory />} />
                         <Route path="/inventory/stock-card/:id" element={<StockCard />} />
                         <Route path="/reports/sales" element={<SalesReport />} />

@@ -19,5 +19,6 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('vehicles', VehicleController::class);
         Route::apiResource('inventory', InventoryController::class);
         Route::apiResource('job-orders', JobOrderController::class);
+        Route::apiResource('suppliers', \App\Http\Controllers\API\V1\SupplierController::class);
     });
 });

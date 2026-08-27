@@ -295,6 +295,7 @@ const Dashboard = () => {
                             { label: 'Register Vehicle', path: '/vehicles/add', color: 'bg-emerald-600 hover:bg-emerald-700' },
                             { label: 'New Job Order', path: '/job-orders/add', color: 'bg-amber-600 hover:bg-amber-700' },
                             { label: 'Add Inventory', path: '/inventory/add', color: 'bg-purple-600 hover:bg-purple-700' },
+                            { label: 'Add Supplier', path: '/suppliers/add', color: 'bg-indigo-600 hover:bg-indigo-700' },
                         ].map((action, i) => (
                             <button 
                                 key={i}
