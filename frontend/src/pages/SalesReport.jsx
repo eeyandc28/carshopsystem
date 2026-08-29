@@ -62,9 +62,9 @@ const SalesReport = () => {
         doc.setFontSize(12);
         doc.setTextColor(30, 41, 59);
         doc.setFont('helvetica', 'bold');
-        doc.text(`₱${summary.total_sales.toLocaleString()}`, 20, 62);
+        doc.text(`PHP ${summary.total_sales.toLocaleString()}`, 20, 62);
         doc.text(`${summary.total_orders}`, 80, 62);
-        doc.text(`₱${summary.average_order_value.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 140, 62);
+        doc.text(`PHP ${summary.average_order_value.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 140, 62);
 
         // Sales Table
         const tableData = sales.map(s => [
@@ -72,7 +72,7 @@ const SalesReport = () => {
             s.job_order_number,
             s.vehicle?.customer?.full_name || 'N/A',
             s.vehicle?.plate_number || 'N/A',
-            `₱${parseFloat(s.actual_cost).toLocaleString()}`
+            `PHP ${parseFloat(s.actual_cost).toLocaleString()}`
         ]);
 
         autoTable(doc, {

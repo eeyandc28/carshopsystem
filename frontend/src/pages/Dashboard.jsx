@@ -151,7 +151,7 @@ const Dashboard = () => {
                     i.name,
                     i.part_number,
                     i.stock_quantity.toString(),
-                    `₱${i.unit_price}`,
+                    `PHP ${i.unit_price}`,
                     i.stock_quantity <= (i.reorder_level || 5) ? 'LOW STOCK' : 'IN STOCK'
                 ]),
                 headStyles: { fillColor: [16, 185, 129] }, // Emerald 500

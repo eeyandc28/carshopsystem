@@ -174,8 +174,8 @@ const JobOrderDetails = () => {
         const tableBody = orderItems.map(item => [
             item.description,
             item.quantity,
-            `₱${parseFloat(item.unit_price).toLocaleString()}`,
-            `₱${parseFloat(item.total_price).toLocaleString()}`
+            `PHP ${parseFloat(item.unit_price).toLocaleString()}`,
+            `PHP ${parseFloat(item.total_price).toLocaleString()}`
         ]);
 
         if (tableBody.length === 0) {
@@ -201,7 +201,7 @@ const JobOrderDetails = () => {
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text('TOTAL DUE:', 140, finalY);
-        doc.text(`₱${(order.actual_cost || order.estimated_cost || 0).toLocaleString()}`, 196, finalY, { align: 'right' });
+        doc.text(`PHP ${(order.actual_cost || order.estimated_cost || 0).toLocaleString()}`, 196, finalY, { align: 'right' });
 
         // Notes
         doc.setFontSize(10);
