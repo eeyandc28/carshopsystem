@@ -168,7 +168,7 @@ const AddJobOrder = () => {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Estimated Cost ($)</label>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Estimated Cost (₱)</label>
                         <input 
                             type="number" 
                             step="0.01"

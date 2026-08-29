@@ -120,7 +120,7 @@ const EditInventory = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">Unit Price ($)</label>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Unit Price (₱)</label>
                             <input type="number" step="0.01" {...register('unit_price')} className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="0.00" />
                             {errors.unit_price && <p className="mt-1 text-xs text-red-400">{errors.unit_price.message}</p>}
                         </div>

@@ -143,7 +143,7 @@ const Inventory = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-sm text-white font-semibold">${item.unit_price.toLocaleString()}</span>
+                                            <span className="text-sm text-white font-semibold">₱{item.unit_price.toLocaleString()}</span>
                                         </td>
                                         <td className="px-6 py-4">
                                             {item.stock_quantity <= item.reorder_level ? (

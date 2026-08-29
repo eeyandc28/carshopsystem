@@ -135,7 +135,7 @@ const StockCard = () => {
                         <div className="h-12 w-px bg-slate-800"></div>
                         <div className="text-right">
                             <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Unit Price</p>
-                            <p className="text-3xl font-black text-emerald-400">${item.unit_price}</p>
+                            <p className="text-3xl font-black text-emerald-400">₱{item.unit_price}</p>
                         </div>
                     </div>
                 </div>

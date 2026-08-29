@@ -62,9 +62,9 @@ const SalesReport = () => {
         doc.setFontSize(12);
         doc.setTextColor(30, 41, 59);
         doc.setFont('helvetica', 'bold');
-        doc.text(`$${summary.total_sales.toLocaleString()}`, 20, 62);
+        doc.text(`₱${summary.total_sales.toLocaleString()}`, 20, 62);
         doc.text(`${summary.total_orders}`, 80, 62);
-        doc.text(`$${summary.average_order_value.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 140, 62);
+        doc.text(`₱${summary.average_order_value.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 140, 62);
 
         // Sales Table
         const tableData = sales.map(s => [
@@ -72,7 +72,7 @@ const SalesReport = () => {
             s.job_order_number,
             s.vehicle?.customer?.full_name || 'N/A',
             s.vehicle?.plate_number || 'N/A',
-            `$${parseFloat(s.actual_cost).toLocaleString()}`
+            `₱${parseFloat(s.actual_cost).toLocaleString()}`
         ]);
 
         autoTable(doc, {
@@ -143,7 +143,7 @@ const SalesReport = () => {
                     </div>
                     <div>
                         <p className="text-slate-400 text-sm">Total Revenue</p>
-                        <p className="text-2xl font-bold text-white">${summary.total_sales.toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-white">₱{summary.total_sales.toLocaleString()}</p>
                     </div>
                 </div>
                 <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 flex items-center space-x-4">
@@ -161,7 +161,7 @@ const SalesReport = () => {
                     </div>
                     <div>
                         <p className="text-slate-400 text-sm">Avg. Ticket Size</p>
-                        <p className="text-2xl font-bold text-white">${summary.average_order_value.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                        <p className="text-2xl font-bold text-white">₱{summary.average_order_value.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
                     </div>
                 </div>
             </div>
@@ -194,7 +194,7 @@ const SalesReport = () => {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <span className="text-sm font-bold text-emerald-400">
-                                                ${parseFloat(s.actual_cost).toLocaleString()}
+                                                ₱{parseFloat(s.actual_cost).toLocaleString()}
                                             </span>
                                         </td>
                                     </tr>

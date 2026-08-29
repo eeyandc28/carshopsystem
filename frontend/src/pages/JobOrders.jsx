@@ -135,7 +135,7 @@ const JobOrders = () => {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <span className="text-sm text-white font-semibold">
-                                                ${(order.actual_cost || order.estimated_cost || 0).toLocaleString()}
+                                                ₱{(order.actual_cost || order.estimated_cost || 0).toLocaleString()}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">

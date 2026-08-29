@@ -160,7 +160,7 @@ const EditJobOrder = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">Estimated Cost ($)</label>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Estimated Cost (₱)</label>
                             <input 
                                 type="number" 
                                 step="0.01"
@@ -169,7 +169,7 @@ const EditJobOrder = () => {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">Actual Cost ($)</label>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Actual Cost (₱)</label>
                             <input 
                                 type="number" 
                                 step="0.01"

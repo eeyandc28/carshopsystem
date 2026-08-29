@@ -174,8 +174,8 @@ const JobOrderDetails = () => {
         const tableBody = orderItems.map(item => [
             item.description,
             item.quantity,
-            `$${parseFloat(item.unit_price).toLocaleString()}`,
-            `$${parseFloat(item.total_price).toLocaleString()}`
+            `₱${parseFloat(item.unit_price).toLocaleString()}`,
+            `₱${parseFloat(item.total_price).toLocaleString()}`
         ]);
 
         if (tableBody.length === 0) {
@@ -201,7 +201,7 @@ const JobOrderDetails = () => {
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text('TOTAL DUE:', 140, finalY);
-        doc.text(`$${(order.actual_cost || order.estimated_cost || 0).toLocaleString()}`, 196, finalY, { align: 'right' });
+        doc.text(`₱${(order.actual_cost || order.estimated_cost || 0).toLocaleString()}`, 196, finalY, { align: 'right' });
 
         // Notes
         doc.setFontSize(10);
@@ -353,8 +353,8 @@ const JobOrderDetails = () => {
                                                     <p className="text-[10px] text-slate-500 uppercase tracking-widest">{item.item_type}</p>
                                                 </td>
                                                 <td className="py-4 text-center text-slate-300 text-sm">{item.quantity}</td>
-                                                <td className="py-4 text-right text-slate-300 text-sm">${parseFloat(item.unit_price).toLocaleString()}</td>
-                                                <td className="py-4 text-right text-white font-semibold text-sm">${parseFloat(item.total_price).toLocaleString()}</td>
+                                                <td className="py-4 text-right text-slate-300 text-sm">₱{parseFloat(item.unit_price).toLocaleString()}</td>
+                                                <td className="py-4 text-right text-white font-semibold text-sm">₱{parseFloat(item.total_price).toLocaleString()}</td>
                                                 <td className="py-4 text-right">
                                                     <button 
                                                         onClick={() => deleteItem(item.id)}
@@ -424,7 +424,7 @@ const JobOrderDetails = () => {
                                 Estimated
                             </span>
                             <span className="text-white text-sm font-bold">
-                                ${order.estimated_cost?.toLocaleString() || '0.00'}
+                                ₱{order.estimated_cost?.toLocaleString() || '0.00'}
                             </span>
                         </div>
                         {order.actual_cost > 0 && (
@@ -434,7 +434,7 @@ const JobOrderDetails = () => {
                                     Actual Cost
                                 </span>
                                 <span className="text-emerald-400 text-sm font-bold">
-                                    ${order.actual_cost?.toLocaleString()}
+                                    ₱{order.actual_cost?.toLocaleString()}
                                 </span>
                             </div>
                         )}
@@ -492,7 +492,7 @@ const JobOrderDetails = () => {
                                     >
                                         <option value="">-- Select Inventory --</option>
                                         {inventory.map(i => (
-                                            <option key={i.id} value={i.id}>{i.name} (${i.unit_price}) - Stock: {i.stock_quantity}</option>
+                                            <option key={i.id} value={i.id}>{i.name} (₱{i.unit_price}) - Stock: {i.stock_quantity}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -523,7 +523,7 @@ const JobOrderDetails = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Unit Price ($)</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Unit Price (₱)</label>
                                     <input 
                                         required
                                         type="number"
