@@ -4,10 +4,10 @@ import autoTable from 'jspdf-autotable';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import KpiCard from '../components/ui/KpiCard';
-import { 
-    TruckIcon, 
-    WrenchIcon, 
-    CheckCircleIcon, 
+import {
+    TruckIcon,
+    WrenchIcon,
+    CheckCircleIcon,
     CurrencyDollarIcon,
     DocumentArrowDownIcon
 } from '@heroicons/react/24/outline';
@@ -79,7 +79,7 @@ const Dashboard = () => {
             doc.setFontSize(22);
             doc.setTextColor(30, 41, 59); // Slate 800
             doc.text('Car Shop Management System', 14, 22);
-            
+
             doc.setFontSize(12);
             doc.setTextColor(100, 116, 139); // Slate 500
             doc.text('System Operations Report', 14, 30);
@@ -89,7 +89,7 @@ const Dashboard = () => {
             doc.setFontSize(16);
             doc.setTextColor(30, 41, 59);
             doc.text('Performance Summary', 14, 52);
-            
+
             autoTable(doc, {
                 startY: 57,
                 head: [['Metric', 'Value']],
@@ -109,7 +109,7 @@ const Dashboard = () => {
             // Vehicles Table
             doc.setFontSize(16);
             doc.text('Registered Vehicles', 14, doc.lastAutoTable.finalY + 15);
-            
+
             autoTable(doc, {
                 startY: doc.lastAutoTable.finalY + 20,
                 head: [['Plate', 'Brand', 'Model', 'Year', 'Owner']],
@@ -127,7 +127,7 @@ const Dashboard = () => {
             doc.addPage();
             doc.setFontSize(16);
             doc.text('Job Orders Status', 14, 22);
-            
+
             autoTable(doc, {
                 startY: 27,
                 head: [['Order #', 'Status', 'Vehicle', 'Description']],
@@ -143,7 +143,7 @@ const Dashboard = () => {
             // Inventory Table
             doc.setFontSize(16);
             doc.text('Inventory & Stock', 14, doc.lastAutoTable.finalY + 15);
-            
+
             autoTable(doc, {
                 startY: doc.lastAutoTable.finalY + 20,
                 head: [['Item', 'Part #', 'Stock', 'Price', 'Status']],
@@ -151,7 +151,7 @@ const Dashboard = () => {
                     i.name,
                     i.part_number,
                     i.stock_quantity.toString(),
-                    `PHP ${i.unit_price}`,
+                    `Php ${i.unit_price}`,
                     i.stock_quantity <= (i.reorder_level || 5) ? 'LOW STOCK' : 'IN STOCK'
                 ]),
                 headStyles: { fillColor: [16, 185, 129] }, // Emerald 500
@@ -193,7 +193,7 @@ const Dashboard = () => {
                     <p className="text-slate-400">Welcome back! Here is what is happening today.</p>
                 </div>
                 <div className="flex space-x-3">
-                    <button 
+                    <button
                         onClick={generateReport}
                         disabled={generating}
                         className="flex items-center px-4 py-2 bg-slate-800 text-white rounded-xl border border-slate-700 hover:bg-slate-700 transition-all disabled:opacity-50"
@@ -201,7 +201,7 @@ const Dashboard = () => {
                         <DocumentArrowDownIcon className="h-4 w-4 mr-2" />
                         {generating ? 'Generating...' : 'Generate Report'}
                     </button>
-                    <button 
+                    <button
                         onClick={() => navigate('/vehicles/add')}
                         className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
                     >
@@ -211,31 +211,31 @@ const Dashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <KpiCard 
-                    title="Total Vehicles" 
-                    value={stats.vehicles.toLocaleString()} 
-                    icon={TruckIcon} 
+                <KpiCard
+                    title="Total Vehicles"
+                    value={stats.vehicles.toLocaleString()}
+                    icon={TruckIcon}
                     trend={{ value: 12, isPositive: true }}
                     colorClass="bg-blue-600/20 shadow-blue-500/10"
                 />
-                <KpiCard 
-                    title="Active Repairs" 
-                    value={stats.activeOrders.toLocaleString()} 
-                    icon={WrenchIcon} 
+                <KpiCard
+                    title="Active Repairs"
+                    value={stats.activeOrders.toLocaleString()}
+                    icon={WrenchIcon}
                     trend={{ value: 5, isPositive: false }}
                     colorClass="bg-amber-600/20 shadow-amber-500/10"
                 />
-                <KpiCard 
-                    title="Completed" 
-                    value={stats.completed.toLocaleString()} 
-                    icon={CheckCircleIcon} 
+                <KpiCard
+                    title="Completed"
+                    value={stats.completed.toLocaleString()}
+                    icon={CheckCircleIcon}
                     trend={{ value: 8, isPositive: true }}
                     colorClass="bg-emerald-600/20 shadow-emerald-500/10"
                 />
-                <KpiCard 
-                    title="Inventory Items" 
-                    value={stats.inventory.toLocaleString()} 
-                    icon={CurrencyDollarIcon} 
+                <KpiCard
+                    title="Inventory Items"
+                    value={stats.inventory.toLocaleString()}
+                    icon={CurrencyDollarIcon}
                     trend={{ value: 15, isPositive: true }}
                     colorClass="bg-purple-600/20 shadow-purple-500/10"
                 />
@@ -245,7 +245,7 @@ const Dashboard = () => {
                 <div className="lg:col-span-2 bg-slate-900 rounded-2xl border border-slate-800 p-6">
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="text-lg font-bold text-white">Recent Job Orders</h3>
-                        <button 
+                        <button
                             onClick={() => navigate('/job-orders')}
                             className="text-blue-400 text-sm hover:text-blue-300 transition-colors"
                         >
@@ -265,13 +265,12 @@ const Dashboard = () => {
                                             <p className="text-xs text-slate-500">{order.vehicle?.plate_number} · {order.description?.slice(0, 40)}</p>
                                         </div>
                                     </div>
-                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${
-                                        order.status === 'completed' || order.status === 'released' 
-                                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                                            : order.status === 'pending' 
-                                            ? 'bg-slate-500/10 text-slate-400 border-slate-500/20'
-                                            : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                                    }`}>
+                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${order.status === 'completed' || order.status === 'released'
+                                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                            : order.status === 'pending'
+                                                ? 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                                                : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                        }`}>
                                         {order.status?.replace('_', ' ')}
                                     </span>
                                 </div>
@@ -297,7 +296,7 @@ const Dashboard = () => {
                             { label: 'Add Inventory', path: '/inventory/add', color: 'bg-purple-600 hover:bg-purple-700' },
                             { label: 'Add Supplier', path: '/suppliers/add', color: 'bg-indigo-600 hover:bg-indigo-700' },
                         ].map((action, i) => (
-                            <button 
+                            <button
                                 key={i}
                                 onClick={() => navigate(action.path)}
                                 className={`w-full text-left px-4 py-3 ${action.color} text-white rounded-xl transition-all text-sm font-semibold shadow-lg`}

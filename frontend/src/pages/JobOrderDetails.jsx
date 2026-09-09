@@ -3,11 +3,11 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { 
-    ArrowLeftIcon, 
-    ClipboardDocumentListIcon, 
-    TruckIcon, 
-    UserIcon, 
+import {
+    ArrowLeftIcon,
+    ClipboardDocumentListIcon,
+    TruckIcon,
+    UserIcon,
     CalendarIcon,
     CurrencyDollarIcon,
     ClockIcon,
@@ -137,12 +137,12 @@ const JobOrderDetails = () => {
         doc.setFontSize(22);
         doc.setTextColor(30, 41, 59);
         doc.text('SERVICE INVOICE', 14, 22);
-        
+
         doc.setFontSize(10);
         doc.setTextColor(100, 116, 139);
         doc.text('Car Shop Management System', 14, 28);
         doc.text('123 Service Road, Auto City', 14, 33);
-        
+
         // Invoice Info
         doc.setFontSize(11);
         doc.setTextColor(30, 41, 59);
@@ -174,8 +174,8 @@ const JobOrderDetails = () => {
         const tableBody = orderItems.map(item => [
             item.description,
             item.quantity,
-            `PHP ${parseFloat(item.unit_price).toLocaleString()}`,
-            `PHP ${parseFloat(item.total_price).toLocaleString()}`
+            `Php ${parseFloat(item.unit_price).toLocaleString()}`,
+            `Php ${parseFloat(item.total_price).toLocaleString()}`
         ]);
 
         if (tableBody.length === 0) {
@@ -201,7 +201,7 @@ const JobOrderDetails = () => {
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text('TOTAL DUE:', 140, finalY);
-        doc.text(`PHP ${(order.actual_cost || order.estimated_cost || 0).toLocaleString()}`, 196, finalY, { align: 'right' });
+        doc.text(`Php ${(order.actual_cost || order.estimated_cost || 0).toLocaleString()}`, 196, finalY, { align: 'right' });
 
         // Notes
         doc.setFontSize(10);
@@ -222,7 +222,7 @@ const JobOrderDetails = () => {
 
     return (
         <div className="space-y-6">
-            <button 
+            <button
                 onClick={() => navigate(-1)}
                 className="flex items-center text-slate-400 hover:text-white transition-colors"
             >
@@ -241,14 +241,14 @@ const JobOrderDetails = () => {
                     <p className="text-slate-400">Created on {new Date(order.created_at).toLocaleDateString()}</p>
                 </div>
                 <div className="flex space-x-3">
-                    <button 
+                    <button
                         onClick={generateInvoice}
                         className="flex items-center px-4 py-2 bg-slate-800 text-white rounded-xl border border-slate-700 hover:bg-slate-700 transition-all text-sm font-semibold"
                     >
                         <DocumentTextIcon className="h-4 w-4 mr-2" />
                         Generate Invoice
                     </button>
-                    <button 
+                    <button
                         onClick={() => navigate(`/job-orders/edit/${id}`)}
                         className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all text-sm font-semibold shadow-lg shadow-blue-500/20"
                     >
@@ -263,7 +263,7 @@ const JobOrderDetails = () => {
                     {statusSteps.map((step, index) => {
                         const isCurrent = order.status === step.id;
                         const isPast = statusSteps.findIndex(s => s.id === order.status) >= index;
-                        
+
                         return (
                             <div key={step.id} className="flex-1 flex flex-col items-center relative">
                                 {index !== 0 && (
@@ -272,13 +272,12 @@ const JobOrderDetails = () => {
                                 {index !== statusSteps.length - 1 && (
                                     <div className={`absolute right-0 left-1/2 top-4 h-0.5 -translate-y-1/2 ${isPast && order.status !== step.id ? 'bg-blue-500' : 'bg-slate-800'}`}></div>
                                 )}
-                                <button 
+                                <button
                                     disabled={updating}
                                     onClick={() => updateStatus(step.id)}
-                                    className={`relative z-10 h-8 w-8 rounded-full flex items-center justify-center transition-all ${
-                                        isCurrent ? 'bg-blue-600 ring-4 ring-blue-500/20 scale-110' : 
-                                        isPast ? 'bg-blue-500' : 'bg-slate-800 border border-slate-700'
-                                    }`}
+                                    className={`relative z-10 h-8 w-8 rounded-full flex items-center justify-center transition-all ${isCurrent ? 'bg-blue-600 ring-4 ring-blue-500/20 scale-110' :
+                                            isPast ? 'bg-blue-500' : 'bg-slate-800 border border-slate-700'
+                                        }`}
                                 >
                                     {isPast && !isCurrent ? (
                                         <div className="h-2 w-2 bg-white rounded-full"></div>
@@ -324,7 +323,7 @@ const JobOrderDetails = () => {
                                 <ClipboardDocumentListIcon className="h-5 w-5 mr-2 text-blue-400" />
                                 Parts & Services
                             </h3>
-                            <button 
+                            <button
                                 onClick={() => setShowItemModal(true)}
                                 className="text-sm font-bold text-blue-400 hover:text-blue-300 flex items-center bg-blue-400/5 px-3 py-1.5 rounded-lg border border-blue-400/10 transition-all"
                             >
@@ -332,7 +331,7 @@ const JobOrderDetails = () => {
                                 Add Item
                             </button>
                         </div>
-                        
+
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
                                 <thead>
@@ -356,7 +355,7 @@ const JobOrderDetails = () => {
                                                 <td className="py-4 text-right text-slate-300 text-sm">₱{parseFloat(item.unit_price).toLocaleString()}</td>
                                                 <td className="py-4 text-right text-white font-semibold text-sm">₱{parseFloat(item.total_price).toLocaleString()}</td>
                                                 <td className="py-4 text-right">
-                                                    <button 
+                                                    <button
                                                         onClick={() => deleteItem(item.id)}
                                                         className="p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
                                                     >
@@ -456,16 +455,16 @@ const JobOrderDetails = () => {
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Item Type</label>
                                 <div className="grid grid-cols-2 gap-2">
-                                    <button 
+                                    <button
                                         type="button"
-                                        onClick={() => setNewItem({...newItem, item_type: 'part', inventory_id: '', description: '', unit_price: 0})}
+                                        onClick={() => setNewItem({ ...newItem, item_type: 'part', inventory_id: '', description: '', unit_price: 0 })}
                                         className={`py-2 rounded-lg text-sm font-semibold transition-all ${newItem.item_type === 'part' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}
                                     >
                                         Part / Stock
                                     </button>
-                                    <button 
+                                    <button
                                         type="button"
-                                        onClick={() => setNewItem({...newItem, item_type: 'labor', inventory_id: '', description: '', unit_price: 0})}
+                                        onClick={() => setNewItem({ ...newItem, item_type: 'labor', inventory_id: '', description: '', unit_price: 0 })}
                                         className={`py-2 rounded-lg text-sm font-semibold transition-all ${newItem.item_type === 'labor' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}
                                     >
                                         Labor / Service
@@ -476,14 +475,14 @@ const JobOrderDetails = () => {
                             {newItem.item_type === 'part' ? (
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Select Part</label>
-                                    <select 
+                                    <select
                                         required
                                         className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
                                         value={newItem.inventory_id}
                                         onChange={(e) => {
                                             const item = inventory.find(i => i.id == e.target.value);
                                             setNewItem({
-                                                ...newItem, 
+                                                ...newItem,
                                                 inventory_id: e.target.value,
                                                 description: item ? item.name : '',
                                                 unit_price: item ? item.unit_price : 0
@@ -499,13 +498,13 @@ const JobOrderDetails = () => {
                             ) : (
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Service Description</label>
-                                    <input 
+                                    <input
                                         required
                                         type="text"
                                         placeholder="e.g. Engine Wash, Diagnostic Fee"
                                         className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
                                         value={newItem.description}
-                                        onChange={(e) => setNewItem({...newItem, description: e.target.value})}
+                                        onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
                                     />
                                 </div>
                             )}
@@ -513,37 +512,37 @@ const JobOrderDetails = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Quantity</label>
-                                    <input 
+                                    <input
                                         required
                                         type="number"
                                         step="0.1"
                                         className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
                                         value={newItem.quantity}
-                                        onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
+                                        onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })}
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Unit Price (₱)</label>
-                                    <input 
+                                    <input
                                         required
                                         type="number"
                                         step="0.01"
                                         className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
                                         value={newItem.unit_price}
-                                        onChange={(e) => setNewItem({...newItem, unit_price: e.target.value})}
+                                        onChange={(e) => setNewItem({ ...newItem, unit_price: e.target.value })}
                                     />
                                 </div>
                             </div>
 
                             <div className="pt-6 border-t border-slate-800 flex justify-end space-x-3">
-                                <button 
+                                <button
                                     type="button"
                                     onClick={() => setShowItemModal(false)}
                                     className="px-6 py-2.5 text-sm font-semibold text-slate-400 hover:text-white transition-colors"
                                 >
                                     Cancel
                                 </button>
-                                <button 
+                                <button
                                     type="submit"
                                     disabled={updating}
                                     className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"

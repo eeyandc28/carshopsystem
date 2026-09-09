@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { 
-    CalendarIcon, 
+import {
+    CalendarIcon,
     DocumentArrowDownIcon,
     BanknotesIcon,
     ClipboardDocumentCheckIcon,
@@ -37,12 +37,12 @@ const SalesReport = () => {
 
     const generatePDF = () => {
         const doc = new jsPDF();
-        
+
         // Header
         doc.setFontSize(22);
         doc.setTextColor(30, 41, 59);
         doc.text('SALES INCOME REPORT', 14, 22);
-        
+
         doc.setFontSize(10);
         doc.setTextColor(100, 116, 139);
         doc.text(`Period: ${startDate} to ${endDate}`, 14, 30);
@@ -52,19 +52,19 @@ const SalesReport = () => {
         doc.setDrawColor(226, 232, 240);
         doc.setFillColor(248, 250, 252);
         doc.roundedRect(14, 45, 182, 25, 3, 3, 'FD');
-        
+
         doc.setFontSize(10);
         doc.setTextColor(100, 116, 139);
         doc.text('TOTAL REVENUE', 20, 55);
         doc.text('TOTAL ORDERS', 80, 55);
         doc.text('AVG. ORDER VALUE', 140, 55);
-        
+
         doc.setFontSize(12);
         doc.setTextColor(30, 41, 59);
         doc.setFont('helvetica', 'bold');
-        doc.text(`PHP ${summary.total_sales.toLocaleString()}`, 20, 62);
+        doc.text(`Php ${summary.total_sales.toLocaleString()}`, 20, 62);
         doc.text(`${summary.total_orders}`, 80, 62);
-        doc.text(`PHP ${summary.average_order_value.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 140, 62);
+        doc.text(`Php ${summary.average_order_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 140, 62);
 
         // Sales Table
         const tableData = sales.map(s => [
@@ -72,7 +72,7 @@ const SalesReport = () => {
             s.job_order_number,
             s.vehicle?.customer?.full_name || 'N/A',
             s.vehicle?.plate_number || 'N/A',
-            `PHP ${parseFloat(s.actual_cost).toLocaleString()}`
+            `Php ${parseFloat(s.actual_cost).toLocaleString()}`
         ]);
 
         autoTable(doc, {
@@ -96,7 +96,7 @@ const SalesReport = () => {
                     <h1 className="text-2xl font-bold text-white">Sales Income Monitoring</h1>
                     <p className="text-slate-400">Track your revenue and service performance.</p>
                 </div>
-                <button 
+                <button
                     onClick={generatePDF}
                     className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
                 >
@@ -112,7 +112,7 @@ const SalesReport = () => {
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">From Date</label>
                         <div className="relative">
                             <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-                            <input 
+                            <input
                                 type="date"
                                 className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-blue-500 outline-none"
                                 value={startDate}
@@ -124,7 +124,7 @@ const SalesReport = () => {
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">To Date</label>
                         <div className="relative">
                             <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-                            <input 
+                            <input
                                 type="date"
                                 className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-blue-500 outline-none"
                                 value={endDate}
@@ -161,7 +161,7 @@ const SalesReport = () => {
                     </div>
                     <div>
                         <p className="text-slate-400 text-sm">Avg. Ticket Size</p>
-                        <p className="text-2xl font-bold text-white">₱{summary.average_order_value.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                        <p className="text-2xl font-bold text-white">₱{summary.average_order_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                     </div>
                 </div>
             </div>
