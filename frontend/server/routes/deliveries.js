@@ -124,7 +124,11 @@ router.post('/', async (req, res) => {
         res.status(201).json({ ...delivery, id: delivery.id });
     } catch (err) {
         console.error('Create delivery error:', err);
-        res.status(500).json({ message: 'Failed to save delivery: ' + (err.message || 'Server error') });
+        const isTableMissing = err.message && (err.message.includes("Could not find the table") || err.message.includes("schema cache"));
+        const msg = isTableMissing 
+            ? "Table 'public.deliveries' missing in Supabase database. Please run schema_deliveries_and_payments.sql in your Supabase SQL Editor."
+            : (err.message || 'Server error');
+        res.status(500).json({ message: msg });
     }
 });
 
