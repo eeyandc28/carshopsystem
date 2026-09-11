@@ -110,7 +110,7 @@ const AddDelivery = () => {
             if (e.response?.data?.errors) {
                 setErrors(e.response.data.errors);
             } else {
-                alert('Failed to save delivery. Please try again.');
+                alert(e.response?.data?.message || 'Failed to save delivery. Please try again.');
             }
         } finally {
             setSubmitting(false);

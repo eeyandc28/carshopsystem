@@ -71,7 +71,7 @@ class DeliveryController extends Controller
             $delivery = Delivery::create([
                 'delivery_number'  => $deliveryNumber,
                 'supplier_id'      => $validated['supplier_id'] ?? null,
-                'received_by'      => $request->user()->id,
+                'received_by'      => $request->user()?->id ?? null,
                 'received_date'    => $validated['received_date'],
                 'reference_number' => $validated['reference_number'] ?? null,
                 'notes'            => $validated['notes'] ?? null,

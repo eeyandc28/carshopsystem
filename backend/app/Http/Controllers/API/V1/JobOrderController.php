@@ -26,7 +26,7 @@ class JobOrderController extends Controller
         $data = [
             'job_order_number' => 'JO-' . strtoupper(Str::random(8)),
             'vehicle_id' => $validated['vehicle_id'],
-            'service_advisor_id' => $request->user()->id,
+            'service_advisor_id' => $request->user()?->id ?? 1,
             'complaint' => $validated['description'],
             'status' => 'pending',
             'estimated_completion' => $validated['promised_at'],
