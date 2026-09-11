@@ -93,10 +93,10 @@ const AddDelivery = () => {
         setSubmitting(true);
         try {
             const payload = {
-                supplier_id:      supplierId || null,
+                supplier_id:      supplierId ? parseInt(supplierId) : null,
                 received_date:    receivedDate,
-                reference_number: referenceNumber || null,
-                notes:            notes || null,
+                reference_number: referenceNumber ? String(referenceNumber).trim() : null,
+                notes:            notes ? String(notes).trim() : null,
                 status,
                 items: items.map(r => ({
                     inventory_id:      parseInt(r.inventory_id),
@@ -107,10 +107,18 @@ const AddDelivery = () => {
             const res = await api.post('/deliveries', payload);
             navigate('/deliveries/' + res.data.id);
         } catch (e) {
+            console.error('Delivery save error:', e);
             if (e.response?.data?.errors) {
                 setErrors(e.response.data.errors);
+                const firstKey = Object.keys(e.response.data.errors)[0];
+                const firstVal = e.response.data.errors[firstKey];
+                const errMsg = Array.isArray(firstVal) ? firstVal[0] : firstVal;
+                alert(`Validation error (${firstKey}): ${errMsg}`);
             } else {
-                alert(e.response?.data?.message || 'Failed to save delivery. Please try again.');
+                const serverMsg = e.response?.data?.message 
+                    || (typeof e.response?.data === 'string' ? e.response?.data : null)
+                    || e.message;
+                alert(`Failed to save delivery: ${serverMsg || 'Please try again.'}`);
             }
         } finally {
             setSubmitting(false);
