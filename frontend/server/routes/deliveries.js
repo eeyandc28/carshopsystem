@@ -32,12 +32,20 @@ const generateDeliveryNumber = async () => {
 // GET /api/v1/deliveries
 router.get('/', async (req, res) => {
     try {
-        const { data: deliveries, error } = await supabase
+        let { data: deliveries, error } = await supabase
             .from('deliveries')
-            .select('*, supplier:suppliers(id, name), receiver:users(id, name), items:delivery_items(*, inventory:inventories(id, name, part_number, unit_price))')
+            .select('*, supplier:suppliers(id, name), items:delivery_items(*, inventory:inventories(id, name, part_number, unit_price))')
             .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+            console.error('Fetch deliveries join error, trying plain select:', error);
+            const fallback = await supabase
+                .from('deliveries')
+                .select('*')
+                .order('created_at', { ascending: false });
+            if (fallback.error) throw fallback.error;
+            deliveries = fallback.data || [];
+        }
         
         const formatted = (deliveries || []).map(d => {
             const total_cost = (d.items || []).reduce((sum, item) => sum + (parseFloat(item.total_cost) || 0), 0);
@@ -51,6 +59,7 @@ router.get('/', async (req, res) => {
 
         res.json({ data: formatted });
     } catch (err) {
+        console.error('Deliveries error:', err);
         res.status(500).json({ message: 'Failed to fetch deliveries', error: err.message });
     }
 });
@@ -135,14 +144,22 @@ router.post('/', async (req, res) => {
 // GET /api/v1/deliveries/:id
 router.get('/:id', async (req, res) => {
     try {
-        const { data: delivery, error } = await supabase
+        let { data: delivery, error } = await supabase
             .from('deliveries')
-            .select('*, supplier:suppliers(*), receiver:users(id, name), items:delivery_items(*, inventory:inventories(*))')
+            .select('*, supplier:suppliers(*), items:delivery_items(*, inventory:inventories(*))')
             .eq('id', req.params.id)
             .single();
 
         if (error || !delivery) {
-            return res.status(404).json({ message: 'Delivery not found' });
+            const fallback = await supabase
+                .from('deliveries')
+                .select('*')
+                .eq('id', req.params.id)
+                .single();
+            if (fallback.error || !fallback.data) {
+                return res.status(404).json({ message: 'Delivery not found' });
+            }
+            delivery = fallback.data;
         }
 
         const total_cost = (delivery.items || []).reduce((sum, item) => sum + (parseFloat(item.total_cost) || 0), 0);

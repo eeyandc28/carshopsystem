@@ -35,8 +35,9 @@ const Deliveries = () => {
         try {
             const params = { page, search, start_date: startDate, end_date: endDate };
             const res = await api.get('/deliveries', { params });
-            setDeliveries(res.data.data);
-            setMeta({ total: res.data.total, last_page: res.data.last_page });
+            const list = Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+            setDeliveries(list);
+            setMeta({ total: res.data?.total || list.length, last_page: res.data?.last_page || 1 });
         } catch (e) {
             console.error(e);
         } finally {
