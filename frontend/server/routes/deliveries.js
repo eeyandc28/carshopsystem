@@ -34,7 +34,7 @@ router.get('/', async (req, res) => {
     try {
         const { data: deliveries, error } = await supabase
             .from('deliveries')
-            .select('*, supplier:suppliers(id, name), receiver:users(id, name), items:delivery_items(*, inventory:inventory(id, name, part_number, unit_price))')
+            .select('*, supplier:suppliers(id, name), receiver:users(id, name), items:delivery_items(*, inventory:inventories(id, name, part_number, unit_price))')
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -106,7 +106,7 @@ router.post('/', async (req, res) => {
         if ((status || 'received') === 'received') {
             for (const item of items) {
                 const { data: currentInv } = await supabase
-                    .from('inventory')
+                    .from('inventories')
                     .select('stock_quantity')
                     .eq('id', item.inventory_id)
                     .single();
@@ -115,7 +115,7 @@ router.post('/', async (req, res) => {
                 const newStock = currentStock + (parseInt(item.quantity_received) || 0);
 
                 await supabase
-                    .from('inventory')
+                    .from('inventories')
                     .update({ stock_quantity: newStock })
                     .eq('id', item.inventory_id);
             }
@@ -137,7 +137,7 @@ router.get('/:id', async (req, res) => {
     try {
         const { data: delivery, error } = await supabase
             .from('deliveries')
-            .select('*, supplier:suppliers(*), receiver:users(id, name), items:delivery_items(*, inventory:inventory(*))')
+            .select('*, supplier:suppliers(*), receiver:users(id, name), items:delivery_items(*, inventory:inventories(*))')
             .eq('id', req.params.id)
             .single();
 

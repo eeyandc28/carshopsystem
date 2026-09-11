@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS public.deliveries (
 CREATE TABLE IF NOT EXISTS public.delivery_items (
     id BIGSERIAL PRIMARY KEY,
     delivery_id BIGINT REFERENCES public.deliveries(id) ON DELETE CASCADE,
-    inventory_id BIGINT REFERENCES public.inventory(id) ON DELETE CASCADE,
+    inventory_id BIGINT REFERENCES public.inventories(id) ON DELETE CASCADE,
     quantity_received INTEGER NOT NULL DEFAULT 1,
     unit_cost NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
     total_cost NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
