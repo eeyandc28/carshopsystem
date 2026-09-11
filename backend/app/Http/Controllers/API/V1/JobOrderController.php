@@ -45,11 +45,12 @@ class JobOrderController extends Controller
     public function update(Request $request, JobOrder $jobOrder)
     {
         $validated = $request->validate([
-            'status' => 'sometimes|required|in:pending,diagnosing,waiting_for_parts,in_progress,completed,released',
+            'status' => 'sometimes|required|in:pending,diagnosing,waiting_for_parts,in_progress,completed,released,cancelled',
             'description' => 'sometimes|required|string',
             'diagnosis' => 'nullable|string',
             'repair_action' => 'nullable|string',
             'promised_at' => 'nullable|date',
+            'cancellation_reason' => 'nullable|string',
         ]);
 
         if (isset($validated['description'])) {
@@ -59,7 +60,69 @@ class JobOrderController extends Controller
             $validated['estimated_completion'] = $validated['promised_at'];
         }
 
+        // If transitioning to cancelled
+        if (isset($validated['status']) && $validated['status'] === 'cancelled' && $jobOrder->status !== 'cancelled') {
+            $validated['cancelled_at'] = now();
+            $items = \App\Models\JobOrderItem::where('job_order_id', $jobOrder->id)
+                ->where('item_type', 'part')
+                ->whereNotNull('inventory_id')
+                ->get();
+
+            foreach ($items as $item) {
+                $inv = \App\Models\Inventory::find($item->inventory_id);
+                if ($inv) {
+                    $inv->increment('stock_quantity', (int)$item->quantity);
+                }
+            }
+        }
+
+        // If reopening from cancelled
+        if (isset($validated['status']) && $validated['status'] !== 'cancelled' && $jobOrder->status === 'cancelled') {
+            $validated['cancelled_at'] = null;
+            $validated['cancellation_reason'] = null;
+            $items = \App\Models\JobOrderItem::where('job_order_id', $jobOrder->id)
+                ->where('item_type', 'part')
+                ->whereNotNull('inventory_id')
+                ->get();
+
+            foreach ($items as $item) {
+                $inv = \App\Models\Inventory::find($item->inventory_id);
+                if ($inv) {
+                    $inv->decrement('stock_quantity', (int)$item->quantity);
+                }
+            }
+        }
+
         $jobOrder->update($validated);
+
+        return new JobOrderResource($jobOrder);
+    }
+
+    public function cancel(Request $request, JobOrder $jobOrder)
+    {
+        $validated = $request->validate([
+            'reason' => 'nullable|string',
+        ]);
+
+        if ($jobOrder->status !== 'cancelled') {
+            $items = \App\Models\JobOrderItem::where('job_order_id', $jobOrder->id)
+                ->where('item_type', 'part')
+                ->whereNotNull('inventory_id')
+                ->get();
+
+            foreach ($items as $item) {
+                $inv = \App\Models\Inventory::find($item->inventory_id);
+                if ($inv) {
+                    $inv->increment('stock_quantity', (int)$item->quantity);
+                }
+            }
+        }
+
+        $jobOrder->update([
+            'status' => 'cancelled',
+            'cancellation_reason' => $validated['reason'] ?? 'Cancelled by user',
+            'cancelled_at' => now(),
+        ]);
 
         return new JobOrderResource($jobOrder);
     }

@@ -21,7 +21,16 @@ class JobOrder extends Model
         'repair_action',
         'status',
         'estimated_completion',
+        'estimated_cost',
+        'actual_cost',
+        'cancellation_reason',
+        'cancelled_at',
     ];
+
+    public function items()
+    {
+        return $this->hasMany(JobOrderItem::class);
+    }
 
     public function vehicle()
     {
