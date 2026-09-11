@@ -51,11 +51,12 @@ const JobOrders = () => {
         }
     };
 
-    const filteredOrders = orders.filter(order => 
-        order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.customer?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.vehicle?.plate_number.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredOrders = orders.filter(order => {
+        const term = searchTerm.toLowerCase();
+        return (order.job_order_number || '').toLowerCase().includes(term) ||
+               (order.customer?.full_name || '').toLowerCase().includes(term) ||
+               (order.vehicle?.plate_number || '').toLowerCase().includes(term);
+    });
 
     return (
         <div className="space-y-6">
@@ -115,18 +116,18 @@ const JobOrders = () => {
                                     <tr key={order.id} className="hover:bg-slate-800/30 transition-colors">
                                         <td className="px-6 py-4">
                                             <div>
-                                                <p className="text-sm font-semibold text-white">{order.order_number}</p>
+                                                <p className="text-sm font-semibold text-white">{order.job_order_number}</p>
                                                 <p className="text-xs text-slate-500">{order.customer?.full_name}</p>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
                                                 <span className="text-sm text-slate-300 font-medium">{order.vehicle?.plate_number}</span>
-                                                <span className="text-xs text-slate-500">{order.vehicle?.brand} {order.vehicle?.model}</span>
+                                                <span className="text-xs text-slate-500">{order.vehicle?.make} {order.vehicle?.model}</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-sm text-slate-300">{order.service_type}</span>
+                                            <span className="text-sm text-slate-300">{order.service_type || 'Repair'}</span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${statusColors[order.status] || statusColors.pending}`}>
@@ -155,7 +156,7 @@ const JobOrders = () => {
                                                     <PencilSquareIcon className="h-4 w-4" />
                                                 </button>
                                                 <button 
-                                                    onClick={() => deleteOrder(order.id, order.order_number)}
+                                                    onClick={() => deleteOrder(order.id, order.job_order_number)}
                                                     title="Delete"
                                                     className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
                                                 >

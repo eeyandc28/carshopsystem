@@ -12,15 +12,16 @@ class Payment extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'invoice_id',
+        'job_order_id',
         'amount',
+        'discount',
         'payment_method',
         'reference_number',
         'payment_date',
     ];
 
-    public function invoice()
+    public function jobOrder()
     {
-        return $this->belongsTo(Invoice::class);
+        return $this->belongsTo(JobOrder::class);
     }
 }

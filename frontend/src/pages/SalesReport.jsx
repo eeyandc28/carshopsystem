@@ -37,57 +37,85 @@ const SalesReport = () => {
 
     const generatePDF = () => {
         const doc = new jsPDF();
+        const L = 14;
 
-        // Header
+        // ---- TITLE ----
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(22);
         doc.setTextColor(30, 41, 59);
-        doc.text('SALES INCOME REPORT', 14, 22);
+        doc.text('SALES INCOME REPORT', L, 22);
 
+        doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
         doc.setTextColor(100, 116, 139);
-        doc.text(`Period: ${startDate} to ${endDate}`, 14, 30);
-        doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 35);
+        doc.text('Period: ' + startDate + ' to ' + endDate, L, 30);
+        doc.text('Generated: ' + new Date().toLocaleString(), L, 36);
 
-        // Summary Boxes in PDF
+        // ---- SUMMARY BANNER ----
         doc.setDrawColor(226, 232, 240);
         doc.setFillColor(248, 250, 252);
-        doc.roundedRect(14, 45, 182, 25, 3, 3, 'FD');
+        doc.roundedRect(L, 42, 182, 26, 2, 2, 'FD');
 
-        doc.setFontSize(10);
-        doc.setTextColor(100, 116, 139);
-        doc.text('TOTAL REVENUE', 20, 55);
-        doc.text('TOTAL ORDERS', 80, 55);
-        doc.text('AVG. ORDER VALUE', 140, 55);
+        const labels  = ['TOTAL REVENUE', 'TOTAL ORDERS', 'AVG. ORDER VALUE'];
+        const values  = [
+            'PHP ' + summary.total_sales.toLocaleString('en-US', { minimumFractionDigits: 2 }),
+            String(summary.total_orders),
+            'PHP ' + summary.average_order_value.toLocaleString('en-US', { minimumFractionDigits: 2 }),
+        ];
+        const xPos = [20, 82, 144];
+        labels.forEach((lbl, i) => {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(100, 116, 139);
+            doc.text(lbl, xPos[i], 51);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.setTextColor(30, 41, 59);
+            doc.text(values[i], xPos[i], 60);
+        });
+        doc.setFont('helvetica', 'normal');
 
-        doc.setFontSize(12);
-        doc.setTextColor(30, 41, 59);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Php ${summary.total_sales.toLocaleString()}`, 20, 62);
-        doc.text(`${summary.total_orders}`, 80, 62);
-        doc.text(`Php ${summary.average_order_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 140, 62);
-
-        // Sales Table
+        // ---- TABLE ----
         const tableData = sales.map(s => [
             new Date(s.created_at).toLocaleDateString(),
             s.job_order_number,
-            s.vehicle?.customer?.full_name || 'N/A',
-            s.vehicle?.plate_number || 'N/A',
-            `Php ${parseFloat(s.actual_cost).toLocaleString()}`
+            s.vehicle && s.vehicle.customer ? s.vehicle.customer.full_name : 'N/A',
+            s.vehicle ? s.vehicle.plate_number : 'N/A',
+            'PHP ' + parseFloat(s.actual_cost).toLocaleString('en-US', { minimumFractionDigits: 2 }),
         ]);
 
         autoTable(doc, {
-            startY: 80,
-            head: [['Date', 'Job Order #', 'Customer', 'Vehicle', 'Income']],
+            startY: 76,
+            margin: { left: L, right: L },
+            head: [['Date', 'Job Order #', 'Customer', 'Vehicle', 'Income (PHP)']],
             body: tableData,
             theme: 'grid',
-            headStyles: { fillColor: [30, 41, 59], fontStyle: 'bold' },
+            headStyles: {
+                fillColor: [30, 41, 59],
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                fontSize: 9,
+                cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
+            },
+            bodyStyles: {
+                fontSize: 9,
+                textColor: [30, 41, 59],
+                cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
+            },
+            alternateRowStyles: { fillColor: [245, 247, 250] },
             columnStyles: {
-                4: { halign: 'right', fontStyle: 'bold' }
-            }
+                0: { cellWidth: 28 },
+                1: { cellWidth: 36 },
+                2: { cellWidth: 60 },
+                3: { cellWidth: 30 },
+                4: { cellWidth: 28, halign: 'right', fontStyle: 'bold' },
+            },
         });
 
-        doc.save(`SalesReport_${startDate}_to_${endDate}.pdf`);
+        doc.save('SalesReport_' + startDate + '_to_' + endDate + '.pdf');
     };
+
+
 
     return (
         <div className="space-y-6">

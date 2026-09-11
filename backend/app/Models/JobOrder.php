@@ -23,6 +23,9 @@ class JobOrder extends Model
         'estimated_completion',
         'estimated_cost',
         'actual_cost',
+        'discount',
+        'payment_status',
+        'amount_paid',
         'cancellation_reason',
         'cancelled_at',
     ];
@@ -30,6 +33,11 @@ class JobOrder extends Model
     public function items()
     {
         return $this->hasMany(JobOrderItem::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
     }
 
     public function vehicle()

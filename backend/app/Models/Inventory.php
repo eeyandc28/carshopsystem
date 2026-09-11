@@ -26,4 +26,9 @@ class Inventory extends Model
     {
         return $this->belongsTo(Supplier::class);
     }
+
+    public function deliveryItems()
+    {
+        return $this->hasMany(DeliveryItem::class);
+    }
 }

@@ -8,19 +8,26 @@ import {
     ArchiveBoxIcon, 
     ArrowLeftOnRectangleIcon,
     ChartBarIcon,
+    ArrowTrendingUpIcon,
+    InboxArrowDownIcon,
     Cog6ToothIcon,
-    XMarkIcon
+    XMarkIcon,
+    BanknotesIcon
 } from '@heroicons/react/24/outline';
 
 const navigation = [
-    { name: 'Dashboard', href: '/', icon: HomeIcon, roles: ['admin', 'service_advisor', 'mechanic'] },
-    { name: 'Customers', href: '/customers', icon: UserGroupIcon, roles: ['admin', 'service_advisor'] },
-    { name: 'Vehicles', href: '/vehicles', icon: TruckIcon, roles: ['admin', 'service_advisor'] },
-    { name: 'Job Orders', href: '/job-orders', icon: ClipboardDocumentListIcon, roles: ['admin', 'service_advisor', 'mechanic'] },
-    { name: 'Inventory', href: '/inventory', icon: ArchiveBoxIcon, roles: ['admin', 'service_advisor'] },
-    { name: 'Suppliers', href: '/suppliers', icon: TruckIcon, roles: ['admin', 'service_advisor'] },
-    { name: 'Reports', href: '/reports/sales', icon: ChartBarIcon, roles: ['admin'] },
-    { name: 'Users', href: '/users', icon: Cog6ToothIcon, roles: ['admin'] },
+    { name: 'Dashboard',     href: '/',                      icon: HomeIcon,                 roles: ['admin', 'service_advisor', 'mechanic'] },
+    { name: 'Cashier',       href: '/cashier',               icon: BanknotesIcon,            roles: ['admin', 'cashier'], group: 'Payments' },
+    { name: 'Customers',     href: '/customers',             icon: UserGroupIcon,             roles: ['admin', 'service_advisor'] },
+    { name: 'Vehicles',      href: '/vehicles',              icon: TruckIcon,                 roles: ['admin', 'service_advisor'] },
+    { name: 'Job Orders',    href: '/job-orders',            icon: ClipboardDocumentListIcon, roles: ['admin', 'service_advisor', 'mechanic'] },
+    { name: 'Inventory',     href: '/inventory',             icon: ArchiveBoxIcon,            roles: ['admin', 'service_advisor'] },
+    { name: 'Suppliers',     href: '/suppliers',             icon: TruckIcon,                 roles: ['admin', 'service_advisor'] },
+    { name: 'Deliveries',    href: '/deliveries',            icon: InboxArrowDownIcon,        roles: ['admin', 'service_advisor'], group: 'Purchasing' },
+    { name: 'Sales Report',  href: '/reports/sales',         icon: ChartBarIcon,              roles: ['admin'], group: 'Reports' },
+    { name: 'Daily Income',  href: '/reports/daily-income',  icon: BanknotesIcon,             roles: ['admin', 'cashier'], group: 'Reports' },
+    { name: 'Item Movement', href: '/reports/item-movement', icon: ArrowTrendingUpIcon,       roles: ['admin'], group: 'Reports' },
+    { name: 'Users',         href: '/users',                 icon: Cog6ToothIcon,             roles: ['admin'] },
 ];
 
 const Sidebar = ({ onClose }) => {
@@ -30,6 +37,14 @@ const Sidebar = ({ onClose }) => {
     const filteredNavigation = navigation.filter(item => 
         item.roles.includes(user?.role || 'service_advisor')
     );
+
+    // Group items that share a group label
+    const navGroups = filteredNavigation.reduce((acc, item) => {
+        const key = item.group || '__none__';
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(item);
+        return acc;
+    }, {});
 
     return (
         <div className="flex flex-col h-full bg-slate-900 border-r border-slate-800">
@@ -49,24 +64,31 @@ const Sidebar = ({ onClose }) => {
             
             <div className="flex-1 flex flex-col overflow-y-auto py-4">
                 <nav className="flex-1 px-3 space-y-1">
-                    {filteredNavigation.map((item) => {
-                        const isActive = location.pathname === item.href;
-                        return (
-                            <Link
-                                key={item.name}
-                                to={item.href}
-                                onClick={onClose}
-                                className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all ${
-                                    isActive 
-                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
-                                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                                }`}
-                            >
-                                <item.icon className={`mr-3 h-5 w-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-white'}`} />
-                                {item.name}
-                            </Link>
-                        );
-                    })}
+                    {Object.entries(navGroups).map(([group, items]) => (
+                        <div key={group}>
+                            {group !== '__none__' && (
+                                <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-600">{group}</p>
+                            )}
+                            {items.map((item) => {
+                                const isActive = location.pathname === item.href;
+                                return (
+                                    <Link
+                                        key={item.name}
+                                        to={item.href}
+                                        onClick={onClose}
+                                        className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all ${
+                                            isActive 
+                                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
+                                            : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                        }`}
+                                    >
+                                        <item.icon className={`mr-3 h-5 w-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-white'}`} />
+                                        {item.name}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    ))}
                 </nav>
             </div>
 

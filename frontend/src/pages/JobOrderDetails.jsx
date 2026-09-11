@@ -37,7 +37,6 @@ const JobOrderDetails = () => {
     const [inventory, setInventory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
-    const [showItemModal, setShowItemModal] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [cancelReasonCategory, setCancelReasonCategory] = useState('Customer Request / Decided Not to Proceed');
     const [cancelReason, setCancelReason] = useState('Customer Request / Decided Not to Proceed');
@@ -87,10 +86,10 @@ const JobOrderDetails = () => {
 
     const addItem = async (e) => {
         e.preventDefault();
+        if (updating || !newItem.description) return;
         setUpdating(true);
         try {
             await api.post(`/job-orders/${id}/items`, newItem);
-            setShowItemModal(false);
             setNewItem({
                 item_type: 'part',
                 inventory_id: '',
@@ -836,18 +835,16 @@ const JobOrderDetails = () => {
                         <DocumentTextIcon className="h-4 w-4 mr-2 text-blue-400" />
                         Service Invoice (No Amount)
                     </button>
-                    <button
-                        onClick={printCancelledInvoice}
-                        className={`flex items-center px-4 py-2 rounded-xl border transition-all text-sm font-semibold shadow-sm ${
-                            order.status === 'cancelled'
-                                ? 'bg-red-500/20 text-red-300 border-red-500/40 hover:bg-red-500/30'
-                                : 'bg-slate-800 text-red-300 border-slate-700 hover:bg-slate-700 hover:border-red-500/30'
-                        }`}
-                        title="Print Cancelled / Voided Invoice"
-                    >
-                        <XCircleIcon className="h-4 w-4 mr-2 text-red-400" />
-                        Cancelled Invoice
-                    </button>
+                    {order.status === 'cancelled' && (
+                        <button
+                            onClick={printCancelledInvoice}
+                            className="flex items-center px-4 py-2 rounded-xl border transition-all text-sm font-semibold shadow-sm bg-red-500/20 text-red-300 border-red-500/40 hover:bg-red-500/30"
+                            title="Print Cancelled / Voided Invoice"
+                        >
+                            <XCircleIcon className="h-4 w-4 mr-2 text-red-400" />
+                            Cancelled Invoice
+                        </button>
+                    )}
                     {order.status !== 'cancelled' ? (
                         <button
                             onClick={() => setShowCancelModal(true)}
@@ -939,8 +936,8 @@ const JobOrderDetails = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div className="lg:col-span-3 space-y-6">
                     {/* Work Description */}
                     <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 shadow-xl">
                         <h3 className="text-white font-bold mb-6 flex items-center">
@@ -968,54 +965,124 @@ const JobOrderDetails = () => {
                                 <ClipboardDocumentListIcon className="h-5 w-5 mr-2 text-blue-400" />
                                 Parts & Services
                             </h3>
-                            <button
-                                onClick={() => setShowItemModal(true)}
-                                className="text-sm font-bold text-blue-400 hover:text-blue-300 flex items-center bg-blue-400/5 px-3 py-1.5 rounded-lg border border-blue-400/10 transition-all"
-                            >
-                                <PlusIcon className="h-4 w-4 mr-1" />
-                                Add Item
-                            </button>
                         </div>
 
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
                                 <thead>
-                                    <tr className="text-slate-500 text-xs uppercase tracking-wider border-b border-slate-800">
-                                        <th className="pb-4 font-semibold">Description</th>
-                                        <th className="pb-4 font-semibold text-center">Qty</th>
-                                        <th className="pb-4 font-semibold text-right">Price</th>
-                                        <th className="pb-4 font-semibold text-right">Total</th>
-                                        <th className="pb-4"></th>
+                                    <tr className="text-slate-500 text-xs uppercase tracking-wider border-b border-slate-800 bg-slate-800/20">
+                                        <th className="px-4 py-3 font-semibold w-32">Type</th>
+                                        <th className="px-4 py-3 font-semibold">Description / Part</th>
+                                        <th className="px-4 py-3 font-semibold text-center w-24">Qty</th>
+                                        <th className="px-4 py-3 font-semibold text-right w-32">Price</th>
+                                        <th className="px-4 py-3 font-semibold text-right w-32">Total</th>
+                                        <th className="px-4 py-3 w-12"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-800">
-                                    {orderItems.length > 0 ? (
-                                        orderItems.map((item) => (
-                                            <tr key={item.id} className="group">
-                                                <td className="py-4">
-                                                    <p className="text-white text-sm font-medium">{item.description}</p>
-                                                    <p className="text-[10px] text-slate-500 uppercase tracking-widest">{item.item_type}</p>
-                                                </td>
-                                                <td className="py-4 text-center text-slate-300 text-sm">{item.quantity}</td>
-                                                <td className="py-4 text-right text-slate-300 text-sm">₱{parseFloat(item.unit_price).toLocaleString()}</td>
-                                                <td className="py-4 text-right text-white font-semibold text-sm">₱{parseFloat(item.total_price).toLocaleString()}</td>
-                                                <td className="py-4 text-right">
-                                                    <button
-                                                        onClick={() => deleteItem(item.id)}
-                                                        className="p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
-                                                    >
-                                                        <TrashIcon className="h-4 w-4" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="5" className="py-12 text-center">
-                                                <p className="text-slate-500 text-sm italic">No parts or services added yet.</p>
+                                    {orderItems.map((item) => (
+                                        <tr key={item.id} className="group hover:bg-slate-800/10">
+                                            <td className="px-4 py-3 text-slate-400 text-xs uppercase tracking-wider">{item.item_type}</td>
+                                            <td className="px-4 py-3">
+                                                <p className="text-white text-sm font-medium">{item.description}</p>
+                                            </td>
+                                            <td className="px-4 py-3 text-center text-slate-300 text-sm">{item.quantity}</td>
+                                            <td className="px-4 py-3 text-right text-slate-300 text-sm">₱{parseFloat(item.unit_price).toLocaleString()}</td>
+                                            <td className="px-4 py-3 text-right text-white font-semibold text-sm">₱{parseFloat(item.total_price).toLocaleString()}</td>
+                                            <td className="px-4 py-3 text-right">
+                                                <button
+                                                    onClick={() => deleteItem(item.id)}
+                                                    className="p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                                                >
+                                                    <TrashIcon className="h-4 w-4" />
+                                                </button>
                                             </td>
                                         </tr>
-                                    )}
+                                    ))}
+
+                                    {/* Inline Add Item Row */}
+                                    <tr className="bg-slate-800/30">
+                                        <td className="px-4 py-3">
+                                            <select
+                                                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                value={newItem.item_type}
+                                                onChange={(e) => setNewItem({ ...newItem, item_type: e.target.value, inventory_id: '', description: '', unit_price: 0 })}
+                                            >
+                                                <option value="part">Part</option>
+                                                <option value="labor">Labor</option>
+                                            </select>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {newItem.item_type === 'part' ? (
+                                                <select
+                                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                    value={newItem.inventory_id}
+                                                    onChange={(e) => {
+                                                        const item = inventory.find(i => String(i.id) === String(e.target.value));
+                                                        setNewItem({
+                                                            ...newItem,
+                                                            inventory_id: e.target.value,
+                                                            description: item ? item.name : '',
+                                                            unit_price: item ? item.unit_price : 0
+                                                        });
+                                                    }}
+                                                >
+                                                    <option value="">-- Select Inventory --</option>
+                                                    {inventory.map(i => (
+                                                        <option key={i.id} value={i.id}>{i.name} (₱{i.unit_price}) - Stock: {i.stock_quantity}</option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    placeholder="Description (Press Enter to save)"
+                                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                    value={newItem.description}
+                                                    onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                                                    onKeyDown={(e) => e.key === 'Enter' && addItem(e)}
+                                                />
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-white text-sm text-center focus:ring-2 focus:ring-blue-500 outline-none"
+                                                value={newItem.quantity}
+                                                onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })}
+                                                onKeyDown={(e) => e.key === 'Enter' && addItem(e)}
+                                            />
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="relative">
+                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 text-sm">₱</span>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    className="w-full pl-6 pr-2 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm text-right focus:ring-2 focus:ring-blue-500 outline-none"
+                                                    value={newItem.unit_price}
+                                                    onChange={(e) => setNewItem({ ...newItem, unit_price: e.target.value })}
+                                                    onKeyDown={(e) => e.key === 'Enter' && addItem(e)}
+                                                    disabled={newItem.item_type === 'part'}
+                                                />
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-right text-emerald-400 font-bold text-sm">
+                                            ₱{((parseFloat(newItem.unit_price) || 0) * (parseInt(newItem.quantity) || 1)).toLocaleString()}
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <button
+                                                type="button"
+                                                onClick={addItem}
+                                                disabled={updating || !newItem.description}
+                                                className="p-1.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 rounded-lg transition-all disabled:opacity-50"
+                                                title="Add Item (Enter)"
+                                            >
+                                                <PlusIcon className="h-4 w-4" />
+                                            </button>
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -1085,120 +1152,6 @@ const JobOrderDetails = () => {
                     </div>
                 </div>
             </div>
-
-            {/* Modal */}
-            {showItemModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-                        <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-900">
-                            <h3 className="text-lg font-bold text-white">Add Part or Service</h3>
-                            <button onClick={() => setShowItemModal(false)} className="text-slate-500 hover:text-white">
-                                <XMarkIcon className="h-6 w-6" />
-                            </button>
-                        </div>
-                        <form onSubmit={addItem} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Item Type</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setNewItem({ ...newItem, item_type: 'part', inventory_id: '', description: '', unit_price: 0 })}
-                                        className={`py-2 rounded-lg text-sm font-semibold transition-all ${newItem.item_type === 'part' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}
-                                    >
-                                        Part / Stock
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setNewItem({ ...newItem, item_type: 'labor', inventory_id: '', description: '', unit_price: 0 })}
-                                        className={`py-2 rounded-lg text-sm font-semibold transition-all ${newItem.item_type === 'labor' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}
-                                    >
-                                        Labor / Service
-                                    </button>
-                                </div>
-                            </div>
-
-                            {newItem.item_type === 'part' ? (
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Select Part</label>
-                                    <select
-                                        required
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                                        value={newItem.inventory_id}
-                                        onChange={(e) => {
-                                            const item = inventory.find(i => i.id == e.target.value);
-                                            setNewItem({
-                                                ...newItem,
-                                                inventory_id: e.target.value,
-                                                description: item ? item.name : '',
-                                                unit_price: item ? item.unit_price : 0
-                                            });
-                                        }}
-                                    >
-                                        <option value="">-- Select Inventory --</option>
-                                        {inventory.map(i => (
-                                            <option key={i.id} value={i.id}>{i.name} (₱{i.unit_price}) - Stock: {i.stock_quantity}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            ) : (
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Service Description</label>
-                                    <input
-                                        required
-                                        type="text"
-                                        placeholder="e.g. Engine Wash, Diagnostic Fee"
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                                        value={newItem.description}
-                                        onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-                                    />
-                                </div>
-                            )}
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Quantity</label>
-                                    <input
-                                        required
-                                        type="number"
-                                        step="0.1"
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                                        value={newItem.quantity}
-                                        onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Unit Price (₱)</label>
-                                    <input
-                                        required
-                                        type="number"
-                                        step="0.01"
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                                        value={newItem.unit_price}
-                                        onChange={(e) => setNewItem({ ...newItem, unit_price: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="pt-6 border-t border-slate-800 flex justify-end space-x-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowItemModal(false)}
-                                    className="px-6 py-2.5 text-sm font-semibold text-slate-400 hover:text-white transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={updating}
-                                    className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
-                                >
-                                    {updating ? 'Adding...' : 'Add to Order'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
 
             {/* Cancel Invoice Modal */}
             {showCancelModal && (

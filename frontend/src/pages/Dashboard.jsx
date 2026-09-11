@@ -132,7 +132,7 @@ const Dashboard = () => {
                 startY: 27,
                 head: [['Order #', 'Status', 'Vehicle', 'Description']],
                 body: orders.map(o => [
-                    o.order_number || 'N/A',
+                    o.job_order_number || 'N/A',
                     (o.status || 'pending').toUpperCase(),
                     o.vehicle?.plate_number || 'N/A',
                     (o.description || 'No description').slice(0, 50) + (o.description?.length > 50 ? '...' : '')
@@ -261,7 +261,7 @@ const Dashboard = () => {
                                             <WrenchIcon className="h-5 w-5" />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-semibold text-white">{order.order_number}</p>
+                                            <p className="text-sm font-semibold text-white">{order.job_order_number}</p>
                                             <p className="text-xs text-slate-500">{order.vehicle?.plate_number} · {order.description?.slice(0, 40)}</p>
                                         </div>
                                     </div>
