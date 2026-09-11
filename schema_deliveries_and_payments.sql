@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS public.deliveries (
     id BIGSERIAL PRIMARY KEY,
     delivery_number VARCHAR(100) UNIQUE NOT NULL,
     supplier_id BIGINT REFERENCES public.suppliers(id) ON DELETE SET NULL,
-    received_by UUID,
+    received_by TEXT,
     received_date DATE NOT NULL,
     reference_number VARCHAR(100),
     notes TEXT,
