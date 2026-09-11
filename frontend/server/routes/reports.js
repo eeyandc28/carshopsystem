@@ -47,4 +47,50 @@ router.get('/sales', async (req, res) => {
     }
 });
 
+// GET /reports/daily-income
+router.get('/daily-income', async (req, res) => {
+    try {
+        const dateStr = req.query.date ? req.query.date : new Date().toISOString().slice(0, 10);
+
+        const { data: payments, error } = await supabase
+            .from('payments')
+            .select('*, jobOrder:job_orders(job_order_number, vehicle:vehicles(customer:customers(full_name)))')
+            .gte('payment_date', `${dateStr}T00:00:00`)
+            .lte('payment_date', `${dateStr}T23:59:59`);
+
+        if (error) throw error;
+
+        const summary = {};
+        let total = 0;
+
+        (payments || []).forEach(p => {
+            const amt = parseFloat(p.amount) || 0;
+            total += amt;
+            const method = p.payment_method || 'Cash';
+            summary[method] = (summary[method] || 0) + amt;
+        });
+
+        const formatted = (payments || []).map(p => ({
+            id: p.id,
+            job_order_number: p.jobOrder?.job_order_number || 'N/A',
+            customer: p.jobOrder?.vehicle?.customer?.full_name || 'Walk-in',
+            amount: p.amount,
+            payment_method: p.payment_method,
+            reference_number: p.reference_number,
+            time: new Date(p.payment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }));
+
+        res.json({
+            data: {
+                date: dateStr,
+                total,
+                summary,
+                payments: formatted
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to fetch daily income report', error: err.message });
+    }
+});
+
 module.exports = router;

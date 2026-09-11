@@ -10,6 +10,8 @@ const jobOrderRoutes = require('../server/routes/jobOrders');
 const reportRoutes = require('../server/routes/reports');
 const userRoutes = require('../server/routes/users');
 const supplierRoutes = require('../server/routes/suppliers');
+const deliveryRoutes = require('../server/routes/deliveries');
+const paymentRoutes = require('../server/routes/payments');
 
 const app = express();
 
@@ -33,6 +35,8 @@ app.use('/api/v1/job-orders', auth, jobOrderRoutes);
 app.use('/api/v1/reports', auth, reportRoutes);
 app.use('/api/v1/users', auth, userRoutes);
 app.use('/api/v1/suppliers', auth, supplierRoutes);
+app.use('/api/v1/deliveries', auth, deliveryRoutes);
+app.use('/api/v1/payments', auth, paymentRoutes);
 
 // GET /api/v1/user
 app.get('/api/v1/user', auth, async (req, res) => {
