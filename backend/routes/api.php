@@ -13,6 +13,10 @@ use App\Http\Controllers\API\V1\DeliveryController;
 use App\Http\Controllers\API\V1\PaymentController;
 
 Route::prefix('v1')->group(function () {
+    Route::get('/login', function() { 
+        return response()->json(['message' => 'Unauthenticated.'], 401); 
+    })->name('login');
+
     Route::post('/auth/login', [AuthController::class, 'login']);
 
     Route::middleware('auth:sanctum')->group(function () {
