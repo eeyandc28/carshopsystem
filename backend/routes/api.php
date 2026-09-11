@@ -33,8 +33,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/payments', [PaymentController::class, 'store']);
         Route::apiResource('customers', CustomerController::class);
         Route::apiResource('vehicles', VehicleController::class);
-        Route::apiResource('inventory', InventoryController::class);
         Route::get('inventory/{id}/movements', [InventoryController::class, 'movements']);
+        Route::apiResource('inventory', InventoryController::class);
 
         Route::apiResource('job-orders', JobOrderController::class);
         Route::post('job-orders/{jobOrder}/cancel', [JobOrderController::class, 'cancel']);

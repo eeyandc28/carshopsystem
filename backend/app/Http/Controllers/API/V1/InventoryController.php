@@ -85,15 +85,15 @@ class InventoryController extends Controller
                 'id'               => 'DI-' . $di->id,
                 'transaction_type' => 'IN',
                 'reference_type'   => 'Delivery',
-                'reference_id'     => $di->delivery->delivery_number ?? $di->delivery_id,
-                'reference_label'  => $di->delivery->supplier?->name ?? 'Supplier',
+                'reference_id'     => $di->delivery?->delivery_number ?? ('DLV-' . $di->delivery_id),
+                'reference_label'  => $di->delivery?->supplier?->name ?? 'Supplier',
                 'quantity'         => (int) $di->quantity_received,
                 'unit_cost'        => (float) $di->unit_cost,
-                'notes'            => $di->delivery->reference_number
+                'notes'            => $di->delivery?->reference_number
                     ? 'DR: ' . $di->delivery->reference_number
                     : null,
                 'created_at'       => $di->delivery?->received_date
-                    ? $di->delivery->received_date->format('Y-m-d') . ' 00:00:00'
+                    ? (is_string($di->delivery->received_date) ? $di->delivery->received_date . ' 00:00:00' : $di->delivery->received_date->format('Y-m-d') . ' 00:00:00')
                     : $di->created_at->toDateTimeString(),
 
             ]);
