@@ -30,7 +30,7 @@ const StockCard = () => {
     const fetchItemDetails = async () => {
         try {
             const res = await api.get('/inventory/' + id);
-            setItem(res.data.data);
+            setItem(res.data.data || res.data);
         } catch (err) {
             console.error('Failed to fetch item details', err);
         }
@@ -44,7 +44,8 @@ const StockCard = () => {
             if (endDate)   params.end_date   = endDate;
 
             const res = await api.get('/inventory/' + id + '/movements', { params });
-            setMovements(res.data.data ?? []);
+            const moves = res.data.data ?? (Array.isArray(res.data) ? res.data : []);
+            setMovements(moves);
             setSummary({
                 total_in:  res.data.total_in  ?? 0,
                 total_out: res.data.total_out ?? 0,

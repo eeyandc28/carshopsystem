@@ -177,4 +177,156 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+// GET /inventory/:id/movements
+router.get('/:id/movements', async (req, res) => {
+    try {
+        const invId = req.params.id;
+        const { start_date, end_date } = req.query;
+
+        // 1. Fetch inventory item
+        const { data: inv, error: invErr } = await supabase
+            .from('inventories')
+            .select('*')
+            .eq('id', invId)
+            .single();
+
+        if (invErr || !inv) {
+            return res.status(404).json({ message: 'Item not found' });
+        }
+
+        // 2. Fetch deliveries IN
+        let deliveryItems = [];
+        try {
+            let { data: dItems, error: dErr } = await supabase
+                .from('delivery_items')
+                .select('*, delivery:deliveries(*, supplier:suppliers(name))')
+                .eq('inventory_id', invId);
+
+            if (dErr || !dItems) {
+                const fallback = await supabase
+                    .from('delivery_items')
+                    .select('*, delivery:deliveries(*)')
+                    .eq('inventory_id', invId);
+                dItems = fallback.data || [];
+            }
+
+            if (dItems) {
+                deliveryItems = dItems.map(di => ({
+                    id: 'DI-' + di.id,
+                    transaction_type: 'IN',
+                    reference_type: 'Delivery',
+                    reference_id: di.delivery?.delivery_number || `DLV-${di.delivery_id}`,
+                    reference_label: di.delivery?.supplier?.name || 'Supplier Delivery',
+                    quantity: parseInt(di.quantity_received) || 0,
+                    unit_cost: parseFloat(di.unit_cost) || 0,
+                    notes: di.delivery?.reference_number ? `DR: ${di.delivery.reference_number}` : null,
+                    created_at: di.delivery?.received_date ? `${di.delivery.received_date}T00:00:00Z` : di.created_at,
+                }));
+            }
+        } catch (e) {
+            console.error('Fetch delivery items error:', e);
+        }
+
+        // 3. Fetch job order items OUT
+        let jobOrderItems = [];
+        try {
+            let { data: joItems, error: joErr } = await supabase
+                .from('job_order_items')
+                .select('*, job_order:job_orders(job_order_number, vehicle:vehicles(customer:customers(full_name)))')
+                .eq('inventory_id', invId)
+                .eq('item_type', 'part');
+
+            if (joErr || !joItems) {
+                const fallback = await supabase
+                    .from('job_order_items')
+                    .select('*, job_order:job_orders(job_order_number)')
+                    .eq('inventory_id', invId)
+                    .eq('item_type', 'part');
+                joItems = fallback.data || [];
+            }
+
+            if (joItems) {
+                jobOrderItems = joItems.map(ji => ({
+                    id: 'JI-' + ji.id,
+                    transaction_type: 'OUT',
+                    reference_type: 'Job Order',
+                    reference_id: ji.job_order?.job_order_number || `JO-${ji.job_order_id}`,
+                    reference_label: ji.job_order?.vehicle?.customer?.full_name || 'Customer Work',
+                    quantity: parseInt(ji.quantity) || 0,
+                    unit_cost: parseFloat(ji.unit_price) || 0,
+                    notes: ji.description || null,
+                    created_at: ji.created_at,
+                }));
+            }
+        } catch (e) {
+            console.error('Fetch job order items error:', e);
+        }
+
+        // 4. Fetch manual stock movements if any
+        let manualMovements = [];
+        try {
+            const { data: mMovements } = await supabase
+                .from('stock_movements')
+                .select('*')
+                .eq('inventory_id', invId);
+
+            if (mMovements) {
+                manualMovements = mMovements.map(m => ({
+                    id: 'SM-' + m.id,
+                    transaction_type: m.transaction_type,
+                    reference_type: m.reference_type || 'Adjustment',
+                    reference_id: m.reference_id || 'MANUAL',
+                    reference_label: m.reference_label || 'Adjustment',
+                    quantity: parseInt(m.quantity) || 0,
+                    unit_cost: parseFloat(m.unit_cost) || 0,
+                    notes: m.notes || null,
+                    created_at: m.created_at,
+                }));
+            }
+        } catch (e) {
+            // ignore if stock_movements table doesn't exist
+        }
+
+        // 5. Merge and filter by dates
+        let allMovements = [...deliveryItems, ...jobOrderItems, ...manualMovements];
+
+        if (start_date) {
+            allMovements = allMovements.filter(m => new Date(m.created_at) >= new Date(start_date));
+        }
+        if (end_date) {
+            allMovements = allMovements.filter(m => new Date(m.created_at) <= new Date(`${end_date}T23:59:59Z`));
+        }
+
+        // Sort chronologically ascending
+        allMovements.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+        // 6. Compute running balance walking backwards from current stock
+        let currentStock = parseInt(inv.stock_quantity) || 0;
+        let total_in = 0;
+        let total_out = 0;
+
+        let balance = currentStock;
+        for (let i = allMovements.length - 1; i >= 0; i--) {
+            allMovements[i].balance_after = balance;
+            if (allMovements[i].transaction_type === 'IN') {
+                total_in += allMovements[i].quantity;
+                balance -= allMovements[i].quantity;
+            } else {
+                total_out += allMovements[i].quantity;
+                balance += allMovements[i].quantity;
+            }
+        }
+
+        res.json({
+            data: allMovements,
+            total_in,
+            total_out,
+            current_stock: currentStock,
+        });
+    } catch (err) {
+        console.error('Movement error:', err);
+        res.status(500).json({ message: 'Failed to fetch movements', error: err.message });
+    }
+});
+
 module.exports = router;
