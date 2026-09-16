@@ -71,6 +71,13 @@ class User extends Authenticatable
             }
         }
 
+        if ($this->role) {
+            $role = Role::where('slug', $this->role)->first();
+            if ($role && $role->permissions()->where('slug', $permissionSlug)->exists()) {
+                return true;
+            }
+        }
+
         return false;
     }
 }

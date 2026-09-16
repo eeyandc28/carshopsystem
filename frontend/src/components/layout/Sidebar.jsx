@@ -20,22 +20,22 @@ import {
 } from '@heroicons/react/24/outline';
 
 const navigation = [
-    { name: 'Dashboard',     href: '/',                      icon: HomeIcon,                 permission: 'dashboard.view', roles: ['admin', 'service_advisor', 'mechanic'] },
-    { name: 'Cashier',       href: '/cashier',               icon: BanknotesIcon,            permission: 'payments.view',  roles: ['admin', 'cashier'], group: 'Payments' },
-    { name: 'Customers',     href: '/customers',             icon: UserGroupIcon,            permission: 'customers.view', roles: ['admin', 'service_advisor'] },
-    { name: 'Vehicles',      href: '/vehicles',              icon: TruckIcon,                permission: 'vehicles.view',  roles: ['admin', 'service_advisor'] },
-    { name: 'Job Orders',    href: '/job-orders',            icon: ClipboardDocumentListIcon, permission: 'job_orders.view', roles: ['admin', 'service_advisor', 'mechanic'] },
-    { name: 'Inventory',     href: '/inventory',             icon: ArchiveBoxIcon,           permission: 'inventory.view', roles: ['admin', 'service_advisor'] },
-    { name: 'Suppliers',     href: '/suppliers',             icon: TruckIcon,                permission: 'suppliers.view', roles: ['admin', 'service_advisor'] },
-    { name: 'Deliveries',    href: '/deliveries',            icon: InboxArrowDownIcon,       permission: 'inventory.stock_in', roles: ['admin', 'service_advisor'], group: 'Purchasing' },
-    { name: 'Sales Report',  href: '/reports/sales',         icon: ChartBarIcon,             permission: 'reports.sales',  roles: ['admin'], group: 'Reports' },
-    { name: 'Daily Income',  href: '/reports/daily-income',  icon: BanknotesIcon,            permission: 'reports.financial', roles: ['admin', 'cashier'], group: 'Reports' },
-    { name: 'Item Movement', href: '/reports/item-movement', icon: ArrowTrendingUpIcon,      permission: 'reports.inventory', roles: ['admin'], group: 'Reports' },
+    { name: 'Dashboard',     href: '/',                      icon: HomeIcon,                 permission: 'dashboard.view', roles: ['admin', 'super_admin', 'service_advisor', 'mechanic', 'cashier', 'inventory_staff', 'general_manager'] },
+    { name: 'Cashier',       href: '/cashier',               icon: BanknotesIcon,            permission: 'payments.view',  roles: ['admin', 'super_admin', 'cashier'], group: 'Payments' },
+    { name: 'Customers',     href: '/customers',             icon: UserGroupIcon,            permission: 'customers.view', roles: ['admin', 'super_admin', 'service_advisor', 'receptionist', 'sales_staff'] },
+    { name: 'Vehicles',      href: '/vehicles',              icon: TruckIcon,                permission: 'vehicles.view',  roles: ['admin', 'super_admin', 'service_advisor', 'receptionist', 'sales_staff'] },
+    { name: 'Job Orders',    href: '/job-orders',            icon: ClipboardDocumentListIcon, permission: 'job_orders.view', roles: ['admin', 'super_admin', 'service_advisor', 'mechanic', 'cashier'] },
+    { name: 'Inventory',     href: '/inventory',             icon: ArchiveBoxIcon,           permission: 'inventory.view', roles: ['admin', 'super_admin', 'service_advisor', 'inventory_staff'] },
+    { name: 'Suppliers',     href: '/suppliers',             icon: TruckIcon,                permission: 'suppliers.view', roles: ['admin', 'super_admin', 'service_advisor', 'inventory_staff'] },
+    { name: 'Deliveries',    href: '/deliveries',            icon: InboxArrowDownIcon,       permission: 'inventory.stock_in', roles: ['admin', 'super_admin', 'service_advisor', 'inventory_staff'], group: 'Purchasing' },
+    { name: 'Sales Report',  href: '/reports/sales',         icon: ChartBarIcon,             permission: 'reports.sales',  roles: ['admin', 'super_admin', 'cashier', 'general_manager', 'accountant'], group: 'Reports' },
+    { name: 'Daily Income',  href: '/reports/daily-income',  icon: BanknotesIcon,            permission: 'reports.financial', roles: ['admin', 'super_admin', 'cashier', 'accountant', 'general_manager'], group: 'Reports' },
+    { name: 'Item Movement', href: '/reports/item-movement', icon: ArrowTrendingUpIcon,      permission: 'reports.inventory', roles: ['admin', 'super_admin', 'inventory_staff', 'general_manager'], group: 'Reports' },
     
     // Administration Group
-    { name: 'User Accounts', href: '/users',                 icon: UserIcon,                 permission: 'users.view',     roles: ['admin'], group: 'Administration' },
-    { name: 'Roles & Access', href: '/roles',                icon: ShieldCheckIcon,          permission: 'roles.view',     roles: ['admin'], group: 'Administration' },
-    { name: 'Audit Logs',    href: '/audit-logs',            icon: ClockIcon,                permission: 'audit_logs.view', roles: ['admin'], group: 'Administration' },
+    { name: 'User Accounts', href: '/users',                 icon: UserIcon,                 permission: 'users.view',     roles: ['admin', 'super_admin'], group: 'Administration' },
+    { name: 'Roles & Access', href: '/roles',                icon: ShieldCheckIcon,          permission: 'roles.view',     roles: ['admin', 'super_admin'], group: 'Administration' },
+    { name: 'Audit Logs',    href: '/audit-logs',            icon: ClockIcon,                permission: 'audit_logs.view', roles: ['admin', 'super_admin'], group: 'Administration' },
 ];
 
 const Sidebar = ({ onClose }) => {
@@ -46,7 +46,15 @@ const Sidebar = ({ onClose }) => {
     const filteredNavigation = navigation.filter(item => {
         if (isSuperAdmin) return true;
         if (item.permission && hasPermission(item.permission)) return true;
-        if (item.roles && item.roles.includes(user?.role || 'service_advisor')) return true;
+
+        const userRolesList = [
+            user?.role,
+            ...(user?.roles || []).map(r => r.slug),
+            ...(user?.role_names || []).map(r => r.toLowerCase().replace(/[^a-z0-9]+/g, '_'))
+        ].filter(Boolean);
+
+        if (item.roles && item.roles.some(r => userRolesList.includes(r))) return true;
+
         return false;
     });
 

@@ -16,14 +16,46 @@ class AuthController extends Controller
         $user->load('roles.permissions');
 
         $perms = [];
-        if ($user->role === 'super_admin' || $user->role === 'admin') {
+        $roles = $user->roles;
+
+        if ($user->role === 'super_admin' || $user->role === 'admin' || $roles->contains('slug', 'super_admin') || $roles->contains('slug', 'admin')) {
             $perms = ['*'];
         } else {
-            foreach ($user->roles as $r) {
+            foreach ($roles as $r) {
                 foreach ($r->permissions as $p) {
                     $perms[] = $p->slug;
                 }
             }
+
+            // Fallback: If roles is empty or missing permissions, fetch from Role model by slug
+            if ($user->role) {
+                $roleModel = Role::with('permissions')->where('slug', $user->role)->first();
+                if ($roleModel) {
+                    if ($roles->isEmpty()) {
+                        $roles = collect([$roleModel]);
+                    }
+                    foreach ($roleModel->permissions as $p) {
+                        $perms[] = $p->slug;
+                    }
+                }
+            }
+
+            // Built-in fallback defaults for standard roles if database permissions are unlinked
+            if (empty($perms) && $user->role === 'cashier') {
+                $perms = [
+                    'dashboard.view',
+                    'invoices.view',
+                    'invoices.create',
+                    'invoices.print',
+                    'payments.view',
+                    'payments.create',
+                    'payments.print',
+                    'payments.void',
+                    'reports.financial',
+                    'reports.sales'
+                ];
+            }
+
             $perms = array_values(array_unique($perms));
         }
 
@@ -36,8 +68,8 @@ class AuthController extends Controller
             'avatar' => $user->avatar,
             'role' => $user->role,
             'status' => $user->status ?? 'active',
-            'roles' => $user->roles,
-            'role_names' => $user->roles->pluck('name')->toArray(),
+            'roles' => $roles,
+            'role_names' => $roles->pluck('name')->toArray(),
             'permissions' => $perms,
             'last_login_at' => $user->last_login_at,
             'created_at' => $user->created_at,
