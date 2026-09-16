@@ -5,6 +5,17 @@ const { requirePermission } = require('../middleware/permission');
 
 const router = express.Router();
 
+// Middleware to ensure only Super Administrator / Administrator can modify roles
+const requireSuperAdmin = (req, res, next) => {
+    const userRole = req.user?.role;
+    const userRoles = req.user?.roles || [];
+    const isSuper = userRole === 'super_admin' || userRole === 'admin' || userRoles.includes('super_admin') || userRoles.includes('admin');
+    if (!isSuper) {
+        return res.status(403).json({ message: 'Unauthorized. Only Super Administrators and Administrators can create, edit, or delete roles.' });
+    }
+    next();
+};
+
 // GET /api/v1/roles - List all roles with user counts and permission details
 router.get('/', requirePermission('roles.view'), async (req, res) => {
     try {
@@ -83,7 +94,7 @@ router.get('/:id', requirePermission('roles.view'), async (req, res) => {
 });
 
 // POST /api/v1/roles - Create new role
-router.post('/', requirePermission('roles.create'), async (req, res) => {
+router.post('/', requireSuperAdmin, async (req, res) => {
     try {
         const { name, slug, description, status, permission_ids } = req.body;
 
@@ -145,7 +156,7 @@ router.post('/', requirePermission('roles.create'), async (req, res) => {
 });
 
 // PUT /api/v1/roles/:id - Update role and its permissions
-router.put('/:id', requirePermission('roles.edit'), async (req, res) => {
+router.put('/:id', requireSuperAdmin, async (req, res) => {
     try {
         const roleId = req.params.id;
         const { name, description, status, permission_ids } = req.body;
@@ -209,7 +220,7 @@ router.put('/:id', requirePermission('roles.edit'), async (req, res) => {
 });
 
 // DELETE /api/v1/roles/:id - Delete custom role
-router.delete('/:id', requirePermission('roles.delete'), async (req, res) => {
+router.delete('/:id', requireSuperAdmin, async (req, res) => {
     try {
         const roleId = req.params.id;
 

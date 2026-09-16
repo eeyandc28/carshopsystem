@@ -241,7 +241,7 @@ const Roles = () => {
                         Define roles and configure granular, action-based permissions across all modules.
                     </p>
                 </div>
-                <Can do="roles.create">
+                {isSuperAdmin && (
                     <button
                         onClick={() => handleOpenModal()}
                         className="flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold text-sm shadow-lg shadow-blue-500/20"
@@ -249,7 +249,7 @@ const Roles = () => {
                         <PlusIcon className="h-5 w-5 mr-2" />
                         Create New Role
                     </button>
-                </Can>
+                )}
             </div>
 
             {/* Search Filter Toolbar */}
@@ -341,12 +341,12 @@ const Roles = () => {
                                                 <div className="flex items-center justify-end space-x-1.5">
                                                     <button
                                                         onClick={() => handleOpenModal(role)}
-                                                        title="Edit Role & Permissions"
+                                                        title={isSuperAdmin ? "Edit Role & Permissions" : "View Role Permissions"}
                                                         className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all"
                                                     >
-                                                        <PencilSquareIcon className="h-4 w-4" />
+                                                        {isSuperAdmin ? <PencilSquareIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                                                     </button>
-                                                    {!role.is_system && (
+                                                    {isSuperAdmin && !role.is_system && (
                                                         <button
                                                             onClick={() => handleDelete(role)}
                                                             title="Delete Role"
@@ -372,7 +372,7 @@ const Roles = () => {
                 </div>
             </div>
 
-            {/* Modal: Create / Edit Role & Permissions */}
+            {/* Modal: Create / Edit / View Role & Permissions */}
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
                     <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
@@ -385,10 +385,14 @@ const Roles = () => {
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-bold text-white">
-                                        {editingRole ? `Edit Role: ${editingRole.name}` : 'Create New Role'}
+                                        {editingRole 
+                                            ? (isSuperAdmin ? `Edit Role: ${editingRole.name}` : `View Role: ${editingRole.name}`)
+                                            : 'Create New Role'}
                                     </h3>
                                     <p className="text-xs text-slate-400">
-                                        Configure role information and assign granular module permissions.
+                                        {isSuperAdmin 
+                                            ? 'Configure role information and assign granular module permissions.'
+                                            : 'Viewing assigned granular permissions for this role.'}
                                     </p>
                                 </div>
                             </div>
@@ -400,6 +404,16 @@ const Roles = () => {
                         {/* Modal Body */}
                         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
                             
+                            {/* Read-Only Notice for non-superadmins */}
+                            {!isSuperAdmin && (
+                                <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-300 text-xs">
+                                    <LockClosedIcon className="h-5 w-5 flex-shrink-0 text-amber-400" />
+                                    <span>
+                                        <strong>Read-Only Mode:</strong> Only Super Administrators and Administrators can create, edit, or delete roles and permissions.
+                                    </span>
+                                </div>
+                            )}
+
                             {/* Role Details */}
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-950/50 p-4 rounded-2xl border border-slate-800">
                                 <div className="sm:col-span-1">
@@ -407,31 +421,31 @@ const Roles = () => {
                                     <input
                                         type="text"
                                         required
-                                        disabled={editingRole?.is_system && editingRole?.slug === 'super_admin'}
+                                        disabled={!isSuperAdmin || (editingRole?.is_system && editingRole?.slug === 'super_admin')}
                                         placeholder="e.g. Senior Cashier"
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-60"
+                                        className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                                     />
                                 </div>
                                 <div className="sm:col-span-1">
                                     <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Slug</label>
                                     <input
                                         type="text"
-                                        disabled={!!editingRole}
+                                        disabled={!isSuperAdmin || !!editingRole}
                                         placeholder="auto-generated"
                                         value={formData.slug}
                                         onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                                        className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50 font-mono"
+                                        className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50 font-mono disabled:cursor-not-allowed"
                                     />
                                 </div>
                                 <div className="sm:col-span-1">
                                     <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Status</label>
                                     <select
                                         value={formData.status}
-                                        disabled={editingRole?.is_system && editingRole?.slug === 'super_admin'}
+                                        disabled={!isSuperAdmin || (editingRole?.is_system && editingRole?.slug === 'super_admin')}
                                         onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                        className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                                     >
                                         <option value="active">Active</option>
                                         <option value="inactive">Inactive</option>
@@ -441,10 +455,11 @@ const Roles = () => {
                                     <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Description</label>
                                     <input
                                         type="text"
+                                        disabled={!isSuperAdmin}
                                         placeholder="Brief description of role responsibilities..."
                                         value={formData.description}
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                        className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                                     />
                                 </div>
                             </div>
@@ -462,7 +477,7 @@ const Roles = () => {
                                         </p>
                                     </div>
                                     
-                                    {!(editingRole?.is_system && (editingRole?.slug === 'super_admin' || editingRole?.slug === 'admin')) && (
+                                    {isSuperAdmin && !(editingRole?.is_system && (editingRole?.slug === 'super_admin' || editingRole?.slug === 'admin')) && (
                                         <div className="flex items-center gap-2">
                                             <button
                                                 type="button"
@@ -523,7 +538,7 @@ const Roles = () => {
                                     const selectedCountInMod = modPerms.filter(p => formData.permission_ids.includes(p.id)).length;
                                     const allInModSelected = selectedCountInMod === modPerms.length;
                                     const isOpen = openModules[modKey] !== false;
-                                    const isLocked = editingRole?.is_system && (editingRole?.slug === 'super_admin' || editingRole?.slug === 'admin');
+                                    const isLocked = !isSuperAdmin || (editingRole?.is_system && (editingRole?.slug === 'super_admin' || editingRole?.slug === 'admin'));
 
                                     return (
                                         <div key={modKey} className="bg-slate-950/60 border border-slate-800/80 rounded-2xl overflow-hidden">
@@ -564,13 +579,13 @@ const Roles = () => {
                                             {isOpen && (
                                                 <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                                                     {visiblePerms.map(perm => {
-                                                        const isChecked = isLocked || formData.permission_ids.includes(perm.id);
+                                                        const isChecked = (editingRole?.is_system && (editingRole?.slug === 'super_admin' || editingRole?.slug === 'admin')) || formData.permission_ids.includes(perm.id);
                                                         return (
                                                             <div
                                                                 key={perm.id}
                                                                 onClick={() => !isLocked && togglePermission(perm.id)}
                                                                 className={`p-3 rounded-xl border flex items-start gap-3 transition-all ${
-                                                                    isLocked ? 'cursor-default opacity-85' : 'cursor-pointer'
+                                                                    isLocked ? 'cursor-default opacity-90' : 'cursor-pointer'
                                                                 } ${
                                                                     isChecked
                                                                         ? 'bg-blue-950/30 border-blue-500/40 text-white'
@@ -605,15 +620,17 @@ const Roles = () => {
                                     onClick={() => setShowModal(false)}
                                     className="px-6 py-2.5 text-sm font-semibold text-slate-400 hover:text-white transition-colors"
                                 >
-                                    Cancel
+                                    {isSuperAdmin ? 'Cancel' : 'Close'}
                                 </button>
-                                <button
-                                    type="submit"
-                                    disabled={submitting}
-                                    className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
-                                >
-                                    {submitting ? 'Saving Role...' : editingRole ? 'Update Role & Permissions' : 'Create Role'}
-                                </button>
+                                {isSuperAdmin && (
+                                    <button
+                                        type="submit"
+                                        disabled={submitting}
+                                        className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                                    >
+                                        {submitting ? 'Saving Role...' : editingRole ? 'Update Role & Permissions' : 'Create Role'}
+                                    </button>
+                                )}
                             </div>
                         </form>
                     </div>

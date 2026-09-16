@@ -11,6 +11,21 @@ use Illuminate\Support\Str;
 
 class RoleController extends Controller
 {
+    private function checkSuperAdmin(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            abort(401, 'Unauthenticated.');
+        }
+
+        $isSuperAdmin = in_array($user->role, ['super_admin', 'admin']) 
+            || $user->roles()->whereIn('slug', ['super_admin', 'admin'])->exists();
+
+        if (!$isSuperAdmin) {
+            abort(403, 'Unauthorized. Only Super Administrators and Administrators can create, edit, or delete roles.');
+        }
+    }
+
     public function index()
     {
         $roles = Role::with(['permissions', 'users'])->get()->map(function ($role) {
@@ -54,6 +69,8 @@ class RoleController extends Controller
 
     public function store(Request $request)
     {
+        $this->checkSuperAdmin($request);
+
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'slug' => 'nullable|string|max:100|unique:roles,slug',
@@ -93,6 +110,8 @@ class RoleController extends Controller
 
     public function update(Request $request, $id)
     {
+        $this->checkSuperAdmin($request);
+
         $role = Role::findOrFail($id);
 
         $validated = $request->validate([
@@ -133,6 +152,8 @@ class RoleController extends Controller
 
     public function destroy(Request $request, $id)
     {
+        $this->checkSuperAdmin($request);
+
         $role = Role::withCount('users')->findOrFail($id);
 
         if ($role->is_system) {
