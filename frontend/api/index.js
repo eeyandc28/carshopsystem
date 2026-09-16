@@ -47,14 +47,38 @@ app.use('/api/v1/audit-logs', auth, auditLogRoutes);
 // GET /api/v1/user
 app.get('/api/v1/user', auth, async (req, res) => {
     const supabase = require('../server/lib/supabase');
+    const { fetchUserPermissions } = require('../server/middleware/permission');
     try {
         const { data: user, error } = await supabase
             .from('users')
-            .select('id, name, email, role, created_at')
+            .select('*')
             .eq('id', req.user.id)
             .single();
         if (error) return res.status(404).json({ message: 'User not found' });
-        res.json(user);
+
+        const { data: userRoles } = await supabase
+            .from('user_roles')
+            .select('role_id, role:roles(id, name, slug, status)')
+            .eq('user_id', user.id);
+
+        const roles = (userRoles || []).map(ur => ur.role).filter(Boolean);
+        const permissions = await fetchUserPermissions(user.id, user.role);
+
+        res.json({
+            id: user.id,
+            name: user.name,
+            username: user.username,
+            email: user.email,
+            contact_number: user.contact_number,
+            avatar: user.avatar,
+            role: user.role,
+            status: user.status || 'active',
+            roles: roles,
+            role_names: roles.map(r => r.name),
+            permissions: permissions,
+            last_login_at: user.last_login_at,
+            created_at: user.created_at
+        });
     } catch (err) {
         res.status(500).json({ message: 'Server error' });
     }
