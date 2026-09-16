@@ -43,20 +43,23 @@ const Sidebar = ({ onClose }) => {
     const { logout, user } = useAuthStore();
     const { hasPermission, isSuperAdmin } = usePermission();
 
+    const userRolesList = [
+        user?.role?.toLowerCase(),
+        ...(user?.roles || []).map(r => r.slug?.toLowerCase() || r.name?.toLowerCase().replace(/[^a-z0-9]+/g, '_')),
+        ...(user?.role_names || []).map(r => r.toLowerCase().replace(/[^a-z0-9]+/g, '_'))
+    ].filter(Boolean);
+
     const filteredNavigation = navigation.filter(item => {
         if (isSuperAdmin) return true;
         if (item.permission && hasPermission(item.permission)) return true;
 
-        const userRolesList = [
-            user?.role,
-            ...(user?.roles || []).map(r => r.slug),
-            ...(user?.role_names || []).map(r => r.toLowerCase().replace(/[^a-z0-9]+/g, '_'))
-        ].filter(Boolean);
-
-        if (item.roles && item.roles.some(r => userRolesList.includes(r))) return true;
+        if (item.roles && item.roles.some(r => userRolesList.includes(r.toLowerCase()))) {
+            return true;
+        }
 
         return false;
     });
+
 
     // Group items that share a group label
     const navGroups = filteredNavigation.reduce((acc, item) => {
