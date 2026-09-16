@@ -260,7 +260,6 @@ const JobOrderDetails = () => {
         doc.autoPrint();
         const blobUrl = URL.createObjectURL(doc.output('blob'));
         window.open(blobUrl, '_blank');
-        doc.save(`Invoice_${order.order_number}.pdf`);
     };
 
     const printTemporaryInvoice = () => {
@@ -415,11 +414,10 @@ const JobOrderDetails = () => {
         doc.setFont('helvetica', 'normal');
         doc.text('CarShop ERP System Generated Document', doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
 
-        // Print & Download
+        // Print Only
         doc.autoPrint();
         const blobUrl = URL.createObjectURL(doc.output('blob'));
         window.open(blobUrl, '_blank');
-        doc.save(`Temporary_Invoice_${order.order_number}.pdf`);
     };
 
     const printServiceInvoice = () => {
@@ -596,11 +594,10 @@ const JobOrderDetails = () => {
         doc.setFont('helvetica', 'normal');
         doc.text('CarShop ERP System Generated Document', doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
 
-        // Print & Download
+        // Print Only
         doc.autoPrint();
         const blobUrl = URL.createObjectURL(doc.output('blob'));
         window.open(blobUrl, '_blank');
-        doc.save(`Service_Invoice_${order.order_number}.pdf`);
     };
 
     const printCancelledInvoice = () => {
@@ -776,11 +773,10 @@ const JobOrderDetails = () => {
         doc.setTextColor(148, 163, 184);
         doc.text('CarShop ERP System Generated Void Record', doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
 
-        // Print & Download
+        // Print Only
         doc.autoPrint();
         const blobUrl = URL.createObjectURL(doc.output('blob'));
         window.open(blobUrl, '_blank');
-        doc.save(`Cancelled_Invoice_${order.order_number}.pdf`);
     };
 
     if (loading) return <div className="p-8 text-white text-center">Loading job order...</div>;
