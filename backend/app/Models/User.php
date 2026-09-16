@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -25,9 +24,15 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'username',
         'email',
+        'contact_number',
+        'avatar',
         'password',
         'role',
+        'status',
+        'last_login_at',
+        'created_by',
     ];
 
     /**
@@ -39,7 +44,33 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'last_login_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'user_roles', 'user_id', 'role_id');
+    }
+
+    public function auditLogs()
+    {
+        return $this->hasMany(AuditLog::class);
+    }
+
+    public function hasPermission(string $permissionSlug): bool
+    {
+        if ($this->role === 'super_admin' || $this->role === 'admin') {
+            return true;
+        }
+
+        foreach ($this->roles as $role) {
+            if ($role->permissions()->where('slug', $permissionSlug)->exists()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

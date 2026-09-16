@@ -34,6 +34,8 @@ import AddDelivery from './pages/AddDelivery';
 import EditDelivery from './pages/EditDelivery';
 import DeliveryDetails from './pages/DeliveryDetails';
 import Users from './pages/Users';
+import Roles from './pages/Roles';
+import AuditLogs from './pages/AuditLogs';
 import Cashier from './pages/Cashier';
 import DailyIncomeReport from './pages/DailyIncomeReport';
 
@@ -81,6 +83,8 @@ function App() {
                         <Route path="/cashier" element={<Cashier />} />
                         <Route path="/reports/daily-income" element={<DailyIncomeReport />} />
                         <Route path="/users" element={<Users />} />
+                        <Route path="/roles" element={<Roles />} />
+                        <Route path="/audit-logs" element={<AuditLogs />} />
                     </Route>
                 </Route>
                 

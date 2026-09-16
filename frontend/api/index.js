@@ -12,6 +12,9 @@ const userRoutes = require('../server/routes/users');
 const supplierRoutes = require('../server/routes/suppliers');
 const deliveryRoutes = require('../server/routes/deliveries');
 const paymentRoutes = require('../server/routes/payments');
+const roleRoutes = require('../server/routes/roles');
+const permissionRoutes = require('../server/routes/permissions');
+const auditLogRoutes = require('../server/routes/auditLogs');
 
 const app = express();
 
@@ -37,6 +40,9 @@ app.use('/api/v1/users', auth, userRoutes);
 app.use('/api/v1/suppliers', auth, supplierRoutes);
 app.use('/api/v1/deliveries', auth, deliveryRoutes);
 app.use('/api/v1/payments', auth, paymentRoutes);
+app.use('/api/v1/roles', auth, roleRoutes);
+app.use('/api/v1/permissions', auth, permissionRoutes);
+app.use('/api/v1/audit-logs', auth, auditLogRoutes);
 
 // GET /api/v1/user
 app.get('/api/v1/user', auth, async (req, res) => {

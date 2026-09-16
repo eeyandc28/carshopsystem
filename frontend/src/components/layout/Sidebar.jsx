@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
+import usePermission from '../../hooks/usePermission';
 import { 
     HomeIcon, 
     UserGroupIcon, 
@@ -12,31 +13,42 @@ import {
     InboxArrowDownIcon,
     Cog6ToothIcon,
     XMarkIcon,
-    BanknotesIcon
+    BanknotesIcon,
+    ShieldCheckIcon,
+    ClockIcon,
+    UserIcon
 } from '@heroicons/react/24/outline';
 
 const navigation = [
-    { name: 'Dashboard',     href: '/',                      icon: HomeIcon,                 roles: ['admin', 'service_advisor', 'mechanic'] },
-    { name: 'Cashier',       href: '/cashier',               icon: BanknotesIcon,            roles: ['admin', 'cashier'], group: 'Payments' },
-    { name: 'Customers',     href: '/customers',             icon: UserGroupIcon,             roles: ['admin', 'service_advisor'] },
-    { name: 'Vehicles',      href: '/vehicles',              icon: TruckIcon,                 roles: ['admin', 'service_advisor'] },
-    { name: 'Job Orders',    href: '/job-orders',            icon: ClipboardDocumentListIcon, roles: ['admin', 'service_advisor', 'mechanic'] },
-    { name: 'Inventory',     href: '/inventory',             icon: ArchiveBoxIcon,            roles: ['admin', 'service_advisor'] },
-    { name: 'Suppliers',     href: '/suppliers',             icon: TruckIcon,                 roles: ['admin', 'service_advisor'] },
-    { name: 'Deliveries',    href: '/deliveries',            icon: InboxArrowDownIcon,        roles: ['admin', 'service_advisor'], group: 'Purchasing' },
-    { name: 'Sales Report',  href: '/reports/sales',         icon: ChartBarIcon,              roles: ['admin'], group: 'Reports' },
-    { name: 'Daily Income',  href: '/reports/daily-income',  icon: BanknotesIcon,             roles: ['admin', 'cashier'], group: 'Reports' },
-    { name: 'Item Movement', href: '/reports/item-movement', icon: ArrowTrendingUpIcon,       roles: ['admin'], group: 'Reports' },
-    { name: 'Users',         href: '/users',                 icon: Cog6ToothIcon,             roles: ['admin'] },
+    { name: 'Dashboard',     href: '/',                      icon: HomeIcon,                 permission: 'dashboard.view', roles: ['admin', 'service_advisor', 'mechanic'] },
+    { name: 'Cashier',       href: '/cashier',               icon: BanknotesIcon,            permission: 'payments.view',  roles: ['admin', 'cashier'], group: 'Payments' },
+    { name: 'Customers',     href: '/customers',             icon: UserGroupIcon,            permission: 'customers.view', roles: ['admin', 'service_advisor'] },
+    { name: 'Vehicles',      href: '/vehicles',              icon: TruckIcon,                permission: 'vehicles.view',  roles: ['admin', 'service_advisor'] },
+    { name: 'Job Orders',    href: '/job-orders',            icon: ClipboardDocumentListIcon, permission: 'job_orders.view', roles: ['admin', 'service_advisor', 'mechanic'] },
+    { name: 'Inventory',     href: '/inventory',             icon: ArchiveBoxIcon,           permission: 'inventory.view', roles: ['admin', 'service_advisor'] },
+    { name: 'Suppliers',     href: '/suppliers',             icon: TruckIcon,                permission: 'suppliers.view', roles: ['admin', 'service_advisor'] },
+    { name: 'Deliveries',    href: '/deliveries',            icon: InboxArrowDownIcon,       permission: 'inventory.stock_in', roles: ['admin', 'service_advisor'], group: 'Purchasing' },
+    { name: 'Sales Report',  href: '/reports/sales',         icon: ChartBarIcon,             permission: 'reports.sales',  roles: ['admin'], group: 'Reports' },
+    { name: 'Daily Income',  href: '/reports/daily-income',  icon: BanknotesIcon,            permission: 'reports.financial', roles: ['admin', 'cashier'], group: 'Reports' },
+    { name: 'Item Movement', href: '/reports/item-movement', icon: ArrowTrendingUpIcon,      permission: 'reports.inventory', roles: ['admin'], group: 'Reports' },
+    
+    // Administration Group
+    { name: 'User Accounts', href: '/users',                 icon: UserIcon,                 permission: 'users.view',     roles: ['admin'], group: 'Administration' },
+    { name: 'Roles & Access', href: '/roles',                icon: ShieldCheckIcon,          permission: 'roles.view',     roles: ['admin'], group: 'Administration' },
+    { name: 'Audit Logs',    href: '/audit-logs',            icon: ClockIcon,                permission: 'audit_logs.view', roles: ['admin'], group: 'Administration' },
 ];
 
 const Sidebar = ({ onClose }) => {
     const location = useLocation();
     const { logout, user } = useAuthStore();
+    const { hasPermission, isSuperAdmin } = usePermission();
 
-    const filteredNavigation = navigation.filter(item => 
-        item.roles.includes(user?.role || 'service_advisor')
-    );
+    const filteredNavigation = navigation.filter(item => {
+        if (isSuperAdmin) return true;
+        if (item.permission && hasPermission(item.permission)) return true;
+        if (item.roles && item.roles.includes(user?.role || 'service_advisor')) return true;
+        return false;
+    });
 
     // Group items that share a group label
     const navGroups = filteredNavigation.reduce((acc, item) => {
@@ -95,11 +107,13 @@ const Sidebar = ({ onClose }) => {
             <div className="p-4 border-t border-slate-800">
                 <div className="flex items-center px-2 py-3 mb-4">
                     <div className="h-9 w-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-blue-400 font-bold">
-                        {user?.name?.[0] || 'A'}
+                        {user?.name?.[0]?.toUpperCase() || 'A'}
                     </div>
                     <div className="ml-3 overflow-hidden">
                         <p className="text-sm font-medium text-white truncate">{user?.name || 'Admin User'}</p>
-                        <p className="text-xs text-slate-500 truncate capitalize">{user?.role || 'administrator'}</p>
+                        <p className="text-xs text-slate-500 truncate capitalize">
+                            {user?.role_names?.join(', ') || user?.role?.replace('_', ' ') || 'administrator'}
+                        </p>
                     </div>
                 </div>
                 <button
