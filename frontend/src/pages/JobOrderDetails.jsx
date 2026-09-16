@@ -169,14 +169,18 @@ const JobOrderDetails = () => {
     };
 
     const printHtmlInvoice = (title, contentHtml) => {
-        const iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed';
-        iframe.style.right = '0';
-        iframe.style.bottom = '0';
-        iframe.style.width = '0';
-        iframe.style.height = '0';
-        iframe.style.border = '0';
-        document.body.appendChild(iframe);
+        let iframe = document.getElementById('carshop-print-iframe');
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = 'carshop-print-iframe';
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+            document.body.appendChild(iframe);
+        }
 
         const doc = iframe.contentWindow.document;
         doc.open();
@@ -354,12 +358,7 @@ const JobOrderDetails = () => {
         setTimeout(() => {
             iframe.contentWindow.focus();
             iframe.contentWindow.print();
-            setTimeout(() => {
-                if (document.body.contains(iframe)) {
-                    document.body.removeChild(iframe);
-                }
-            }, 1500);
-        }, 250);
+        }, 200);
     };
 
     const generateInvoice = () => {
