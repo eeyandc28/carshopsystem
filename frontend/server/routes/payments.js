@@ -9,15 +9,24 @@ router.get('/unpaid', async (req, res) => {
         const { data: jos, error } = await supabase
             .from('job_orders')
             .select('*, vehicle:vehicles(*, customer:customers(*)), payments(*)')
-            .in('status', ['completed', 'released'])
+            .is('deleted_at', null)
             .order('updated_at', { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+            // Fallback if deleted_at column does not exist
+            const { data: fallbackJos, error: fallbackErr } = await supabase
+                .from('job_orders')
+                .select('*, vehicle:vehicles(*, customer:customers(*)), payments(*)')
+                .order('updated_at', { ascending: false });
+            if (fallbackErr) throw fallbackErr;
+            return res.json({ data: fallbackJos || [] });
+        }
         res.json({ data: jos || [] });
     } catch (err) {
         res.status(500).json({ message: 'Failed to fetch unpaid job orders', error: err.message });
     }
 });
+
 
 // POST /api/v1/payments
 router.post('/', async (req, res) => {

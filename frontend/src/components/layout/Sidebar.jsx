@@ -44,9 +44,15 @@ const Sidebar = ({ onClose }) => {
     const { hasPermission, isSuperAdmin, userRoles } = usePermission();
 
     const activeRoles = userRoles && userRoles.length > 0 ? userRoles : getUserRoles(user);
+    const isCashier = activeRoles.some(r => r.includes('cashier')) || 
+                      (typeof user?.role === 'string' && user.role.toLowerCase().includes('cashier')) ||
+                      (user?.email && user.email.toLowerCase().includes('cashier'));
 
     const filteredNavigation = navigation.filter(item => {
         if (isSuperAdmin) return true;
+        if (isCashier && ['/cashier', '/', '/job-orders', '/reports/sales', '/reports/daily-income'].includes(item.href)) {
+            return true;
+        }
         if (item.permission && hasPermission(item.permission)) return true;
 
         if (item.roles && item.roles.some(r => activeRoles.includes(r.toLowerCase()))) {
@@ -55,6 +61,7 @@ const Sidebar = ({ onClose }) => {
 
         return false;
     });
+
 
 
 
