@@ -3,12 +3,16 @@ import api from '../services/api';
 import usePermission from '../hooks/usePermission';
 import { 
     ShieldCheckIcon, 
+    PlusIcon, 
+    PencilSquareIcon, 
+    TrashIcon, 
     XMarkIcon,
     MagnifyingGlassIcon,
     CheckIcon,
     UsersIcon,
     KeyIcon,
     CheckCircleIcon,
+    LockClosedIcon,
     EyeIcon
 } from '@heroicons/react/24/outline';
 
@@ -38,16 +42,31 @@ const Roles = () => {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     
-    // Modal states (View Only)
+    // Modal states
     const [showModal, setShowModal] = useState(false);
-    const [selectedRole, setSelectedRole] = useState(null);
+    const [modalMode, setModalMode] = useState('view'); // 'view' | 'edit' | 'create'
+    const [activeRole, setActiveRole] = useState(null);
+    const [formData, setFormData] = useState({
+        name: '',
+        slug: '',
+        description: '',
+        status: 'active',
+        permission_ids: []
+    });
     const [permissionSearch, setPermissionSearch] = useState('');
+    const [submitting, setSubmitting] = useState(false);
     const [openModules, setOpenModules] = useState({});
+    const [toastMessage, setToastMessage] = useState(null);
 
     useEffect(() => {
         fetchRoles();
         fetchPermissions();
     }, []);
+
+    const showToast = (msg) => {
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(null), 4000);
+    };
 
     const fetchRoles = async () => {
         try {
@@ -70,8 +89,50 @@ const Roles = () => {
         }
     };
 
-    const handleViewRole = (role) => {
-        setSelectedRole(role);
+    const openCreateModal = () => {
+        setActiveRole(null);
+        setModalMode('create');
+        setFormData({
+            name: '',
+            slug: '',
+            description: '',
+            status: 'active',
+            permission_ids: []
+        });
+        setPermissionSearch('');
+        const initialOpen = {};
+        MODULE_ORDER.forEach(m => { initialOpen[m.key] = true; });
+        setOpenModules(initialOpen);
+        setShowModal(true);
+    };
+
+    const openEditModal = (role) => {
+        setActiveRole(role);
+        setModalMode('edit');
+        setFormData({
+            name: role.name,
+            slug: role.slug,
+            description: role.description || '',
+            status: role.status || 'active',
+            permission_ids: role.permission_ids || []
+        });
+        setPermissionSearch('');
+        const initialOpen = {};
+        MODULE_ORDER.forEach(m => { initialOpen[m.key] = true; });
+        setOpenModules(initialOpen);
+        setShowModal(true);
+    };
+
+    const openViewModal = (role) => {
+        setActiveRole(role);
+        setModalMode('view');
+        setFormData({
+            name: role.name,
+            slug: role.slug,
+            description: role.description || '',
+            status: role.status || 'active',
+            permission_ids: role.permission_ids || []
+        });
         setPermissionSearch('');
         const initialOpen = {};
         MODULE_ORDER.forEach(m => { initialOpen[m.key] = true; });
@@ -94,25 +155,158 @@ const Roles = () => {
         return groups;
     }, [allPermissions]);
 
+    const togglePermission = (id) => {
+        if (modalMode === 'view' || !isSuperAdmin) return;
+        if (activeRole?.is_system && (activeRole?.slug === 'super_admin' || activeRole?.slug === 'admin')) return;
+
+        setFormData(prev => {
+            const exists = prev.permission_ids.includes(id);
+            return {
+                ...prev,
+                permission_ids: exists
+                    ? prev.permission_ids.filter(pId => pId !== id)
+                    : [...prev.permission_ids, id]
+            };
+        });
+    };
+
+    const toggleModuleAll = (modKey) => {
+        if (modalMode === 'view' || !isSuperAdmin) return;
+        if (activeRole?.is_system && (activeRole?.slug === 'super_admin' || activeRole?.slug === 'admin')) return;
+
+        const modPerms = groupedPermissions[modKey] || [];
+        const modPermIds = modPerms.map(p => p.id);
+        const allSelected = modPermIds.every(id => formData.permission_ids.includes(id));
+
+        setFormData(prev => ({
+            ...prev,
+            permission_ids: allSelected
+                ? prev.permission_ids.filter(id => !modPermIds.includes(id))
+                : Array.from(new Set([...prev.permission_ids, ...modPermIds]))
+        }));
+    };
+
+    const selectAllPermissions = () => {
+        if (modalMode === 'view' || !isSuperAdmin) return;
+        if (activeRole?.is_system && (activeRole?.slug === 'super_admin' || activeRole?.slug === 'admin')) return;
+
+        setFormData(prev => ({
+            ...prev,
+            permission_ids: allPermissions.map(p => p.id)
+        }));
+    };
+
+    const deselectAllPermissions = () => {
+        if (modalMode === 'view' || !isSuperAdmin) return;
+        if (activeRole?.is_system && (activeRole?.slug === 'super_admin' || activeRole?.slug === 'admin')) return;
+
+        setFormData(prev => ({
+            ...prev,
+            permission_ids: []
+        }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!isSuperAdmin) {
+            alert('Only Super Administrators and Administrators can modify roles.');
+            return;
+        }
+
+        try {
+            setSubmitting(true);
+            const payload = {
+                name: formData.name,
+                description: formData.description,
+                status: formData.status,
+                permission_ids: formData.permission_ids
+            };
+
+            if (modalMode === 'edit' && activeRole) {
+                await api.put(`/roles/${activeRole.id}`, payload);
+                showToast(`Role "${formData.name}" updated successfully!`);
+            } else if (modalMode === 'create') {
+                await api.post('/roles', {
+                    ...payload,
+                    slug: formData.slug || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '_')
+                });
+                showToast(`Role "${formData.name}" created successfully!`);
+            }
+
+            setShowModal(false);
+            fetchRoles();
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to save role');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleDelete = async (role) => {
+        if (!isSuperAdmin) {
+            alert('Only Super Administrators and Administrators can delete roles.');
+            return;
+        }
+        if (role.is_system) {
+            alert('System roles cannot be deleted.');
+            return;
+        }
+        if (role.users_count > 0) {
+            alert(`Cannot delete role "${role.name}" because it is assigned to ${role.users_count} user(s). Reassign them first.`);
+            return;
+        }
+        if (!window.confirm(`Are you sure you want to permanently delete the role "${role.name}"?`)) return;
+
+        try {
+            await api.delete(`/roles/${role.id}`);
+            showToast(`Role "${role.name}" deleted.`);
+            fetchRoles();
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to delete role');
+        }
+    };
+
     const filteredRoles = roles.filter(r => 
         r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (r.description && r.description.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
+    const isEditMode = modalMode === 'edit' || modalMode === 'create';
+    const isSuperRole = activeRole?.slug === 'super_admin' || activeRole?.slug === 'admin';
+
     return (
         <div className="space-y-6">
+            {/* Toast Notification */}
+            {toastMessage && (
+                <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl shadow-emerald-500/20 animate-in slide-in-from-top-3">
+                    <CheckCircleIcon className="h-5 w-5" />
+                    <span className="text-sm font-semibold">{toastMessage}</span>
+                </div>
+            )}
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-white flex items-center gap-2.5">
                         <ShieldCheckIcon className="h-7 w-7 text-blue-500" />
-                        Roles & Permissions
+                        Roles & Permissions Management
                     </h1>
                     <p className="text-slate-400 text-sm mt-1">
-                        System roles and their configured action permissions.
+                        {isSuperAdmin 
+                            ? 'Manage system roles, configure granular permissions, and assign access levels.' 
+                            : 'View defined system roles and assigned module permissions.'}
                     </p>
                 </div>
+                {isSuperAdmin && (
+                    <button
+                        onClick={openCreateModal}
+                        className="flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold text-sm shadow-lg shadow-blue-500/20"
+                    >
+                        <PlusIcon className="h-5 w-5 mr-2" />
+                        Create New Role
+                    </button>
+                )}
             </div>
 
             {/* Search Filter Toolbar */}
@@ -143,7 +337,7 @@ const Roles = () => {
                                 <th className="px-6 py-4 font-semibold text-center">Assigned Users</th>
                                 <th className="px-6 py-4 font-semibold text-center">Permissions</th>
                                 <th className="px-6 py-4 font-semibold text-center">Status</th>
-                                <th className="px-6 py-4 font-semibold text-right">View</th>
+                                <th className="px-6 py-4 font-semibold text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800">
@@ -153,8 +347,7 @@ const Roles = () => {
                                     return (
                                         <tr 
                                             key={role.id} 
-                                            onClick={() => handleViewRole(role)}
-                                            className="hover:bg-slate-800/30 transition-colors cursor-pointer"
+                                            className="hover:bg-slate-800/30 transition-colors"
                                         >
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
@@ -205,17 +398,38 @@ const Roles = () => {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleViewRole(role);
-                                                    }}
-                                                    title="View Role Permissions"
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-blue-400 bg-slate-800/80 hover:bg-blue-500/10 border border-slate-700 hover:border-blue-500/30 rounded-xl transition-all"
-                                                >
-                                                    <EyeIcon className="h-4 w-4 text-blue-400" />
-                                                    <span>View</span>
-                                                </button>
+                                                <div className="flex items-center justify-end space-x-1.5">
+                                                    {/* Edit Action - Only for Super Administrator & Administrator */}
+                                                    {isSuperAdmin && (
+                                                        <button
+                                                            onClick={() => openEditModal(role)}
+                                                            title="Edit Role & Permissions"
+                                                            className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all"
+                                                        >
+                                                            <PencilSquareIcon className="h-4 w-4" />
+                                                        </button>
+                                                    )}
+
+                                                    {/* View Action - For all users */}
+                                                    <button
+                                                        onClick={() => openViewModal(role)}
+                                                        title="View Permissions"
+                                                        className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-all"
+                                                    >
+                                                        <EyeIcon className="h-4 w-4" />
+                                                    </button>
+
+                                                    {/* Delete Action - Only for Super Administrator & Administrator on custom roles */}
+                                                    {isSuperAdmin && !role.is_system && (
+                                                        <button
+                                                            onClick={() => handleDelete(role)}
+                                                            title="Delete Role"
+                                                            className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+                                                        >
+                                                            <TrashIcon className="h-4 w-4" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -232,8 +446,8 @@ const Roles = () => {
                 </div>
             </div>
 
-            {/* Modal: View Role & Permissions (Read Only) */}
-            {showModal && selectedRole && (
+            {/* Modal: View / Edit / Create Role & Permissions */}
+            {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
                     <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
                         
@@ -244,20 +458,19 @@ const Roles = () => {
                                     <ShieldCheckIcon className="h-6 w-6" />
                                 </div>
                                 <div>
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-lg font-bold text-white">
-                                            {selectedRole.name}
-                                        </h3>
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                                            selectedRole.status === 'active'
-                                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                                : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                                        }`}>
-                                            {selectedRole.status || 'active'}
-                                        </span>
-                                    </div>
-                                    <p className="text-xs font-mono text-slate-400 mt-0.5">
-                                        Slug: {selectedRole.slug}
+                                    <h3 className="text-lg font-bold text-white">
+                                        {modalMode === 'create' 
+                                            ? 'Create New Role' 
+                                            : modalMode === 'edit'
+                                                ? `Edit Role: ${activeRole?.name}`
+                                                : `View Role: ${activeRole?.name}`}
+                                    </h3>
+                                    <p className="text-xs text-slate-400">
+                                        {modalMode === 'create'
+                                            ? 'Define a new system role and assign action permissions.'
+                                            : modalMode === 'edit'
+                                                ? 'Modify role information and granular module permissions.'
+                                                : 'View assigned module permissions and role details.'}
                                     </p>
                                 </div>
                             </div>
@@ -267,32 +480,101 @@ const Roles = () => {
                         </div>
 
                         {/* Modal Body */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
                             
-                            {/* Role Summary Card */}
-                            <div className="bg-slate-950/50 p-4 rounded-2xl border border-slate-800 space-y-2">
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Description</p>
-                                <p className="text-sm text-slate-300">
-                                    {selectedRole.description || 'No description provided for this role.'}
-                                </p>
+                            {/* Read-Only Notice for non-superadmins in view mode */}
+                            {modalMode === 'view' && !isSuperAdmin && (
+                                <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-300 text-xs">
+                                    <LockClosedIcon className="h-5 w-5 flex-shrink-0 text-amber-400" />
+                                    <span>
+                                        <strong>Read-Only Mode:</strong> Only Super Administrators and Administrators can create, edit, or delete roles and permissions.
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Role Details */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-950/50 p-4 rounded-2xl border border-slate-800">
+                                <div className="sm:col-span-1">
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Role Name *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        disabled={!isEditMode || !isSuperAdmin || (activeRole?.is_system && isSuperRole)}
+                                        placeholder="e.g. Senior Cashier"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                                    />
+                                </div>
+                                <div className="sm:col-span-1">
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Slug</label>
+                                    <input
+                                        type="text"
+                                        disabled={!isEditMode || !isSuperAdmin || modalMode === 'edit'}
+                                        placeholder="auto-generated"
+                                        value={formData.slug}
+                                        onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                                        className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50 font-mono disabled:cursor-not-allowed"
+                                    />
+                                </div>
+                                <div className="sm:col-span-1">
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Status</label>
+                                    <select
+                                        value={formData.status}
+                                        disabled={!isEditMode || !isSuperAdmin || (activeRole?.is_system && isSuperRole)}
+                                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                        className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                                    >
+                                        <option value="active">Active</option>
+                                        <option value="inactive">Inactive</option>
+                                    </select>
+                                </div>
+                                <div className="sm:col-span-3">
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Description</label>
+                                    <input
+                                        type="text"
+                                        disabled={!isEditMode || !isSuperAdmin}
+                                        placeholder="Brief description of role responsibilities..."
+                                        value={formData.description}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                                    />
+                                </div>
                             </div>
 
-                            {/* Permissions Header & Search */}
+                            {/* Permission Interface Header & Fast Actions */}
                             <div className="space-y-3">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
                                     <div>
                                         <h4 className="text-base font-bold text-white flex items-center gap-2">
                                             <KeyIcon className="h-5 w-5 text-blue-400" />
-                                            Assigned Permissions
+                                            Module Permissions Matrix
                                         </h4>
                                         <p className="text-xs text-slate-400">
-                                            Granted: <span className="text-blue-400 font-bold">
-                                                {(selectedRole.slug === 'super_admin' || selectedRole.slug === 'admin') 
-                                                    ? allPermissions.length 
-                                                    : (selectedRole.permission_ids?.length || 0)}
+                                            Selected: <span className="text-blue-400 font-bold">
+                                                {isSuperRole ? allPermissions.length : formData.permission_ids.length}
                                             </span> of {allPermissions.length} permissions
                                         </p>
                                     </div>
+                                    
+                                    {isEditMode && isSuperAdmin && !isSuperRole && (
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={selectAllPermissions}
+                                                className="px-3 py-1.5 bg-blue-600/20 border border-blue-500/30 text-blue-400 hover:bg-blue-600 hover:text-white rounded-lg text-xs font-semibold transition-all"
+                                            >
+                                                Select All
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={deselectAllPermissions}
+                                                className="px-3 py-1.5 bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg text-xs font-semibold transition-all"
+                                            >
+                                                Deselect All
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Permission Real-time Search */}
@@ -300,13 +582,23 @@ const Roles = () => {
                                     <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                                     <input
                                         type="text"
-                                        placeholder="Filter permissions by keyword (e.g. 'delete', 'create', 'view')..."
+                                        placeholder="Filter permissions by keyword (e.g. 'delete', 'create', 'export')..."
                                         value={permissionSearch}
                                         onChange={(e) => setPermissionSearch(e.target.value)}
                                         className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs placeholder-slate-500 focus:ring-1 focus:ring-blue-500 outline-none"
                                     />
                                 </div>
                             </div>
+
+                            {/* Super Admin Notice */}
+                            {isSuperRole && (
+                                <div className="flex items-center gap-3 p-4 bg-blue-950/40 border border-blue-800/50 rounded-2xl text-blue-300 text-xs">
+                                    <LockClosedIcon className="h-5 w-5 flex-shrink-0 text-blue-400" />
+                                    <span>
+                                        The Super Administrator role possesses permanent, unrestricted system-wide access to all current and future modules.
+                                    </span>
+                                </div>
+                            )}
 
                             {/* Permission Modules List */}
                             <div className="space-y-4">
@@ -323,11 +615,12 @@ const Roles = () => {
 
                                     if (visiblePerms.length === 0) return null;
 
-                                    const isSuperRole = selectedRole.slug === 'super_admin' || selectedRole.slug === 'admin';
-                                    const grantedInMod = isSuperRole 
+                                    const selectedCountInMod = isSuperRole 
                                         ? modPerms.length 
-                                        : modPerms.filter(p => (selectedRole.permission_ids || []).includes(p.id)).length;
+                                        : modPerms.filter(p => formData.permission_ids.includes(p.id)).length;
+                                    const allInModSelected = selectedCountInMod === modPerms.length;
                                     const isOpen = openModules[modKey] !== false;
+                                    const isLocked = !isEditMode || !isSuperAdmin || isSuperRole;
 
                                     return (
                                         <div key={modKey} className="bg-slate-950/60 border border-slate-800/80 rounded-2xl overflow-hidden">
@@ -340,44 +633,56 @@ const Roles = () => {
                                                     <span className="text-base">{icon}</span>
                                                     <h5 className="text-sm font-bold text-white">{modLabel}</h5>
                                                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                                        grantedInMod > 0 
+                                                        selectedCountInMod > 0 
                                                             ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
                                                             : 'bg-slate-800 text-slate-500'
                                                     }`}>
-                                                        {grantedInMod} / {modPerms.length} granted
+                                                        {selectedCountInMod} / {modPerms.length}
                                                     </span>
                                                 </div>
 
-                                                <span className="text-slate-500 text-xs">
-                                                    {isOpen ? '▲' : '▼'}
-                                                </span>
+                                                <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
+                                                    {!isLocked && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => toggleModuleAll(modKey)}
+                                                            className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+                                                        >
+                                                            {allInModSelected ? 'Deselect Module' : 'Select Module'}
+                                                        </button>
+                                                    )}
+                                                    <span className="text-slate-500 text-xs">
+                                                        {isOpen ? '▲' : '▼'}
+                                                    </span>
+                                                </div>
                                             </div>
 
                                             {/* Module Permissions Grid */}
                                             {isOpen && (
                                                 <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                                                     {visiblePerms.map(perm => {
-                                                        const isGranted = isSuperRole || (selectedRole.permission_ids || []).includes(perm.id);
+                                                        const isChecked = isSuperRole || formData.permission_ids.includes(perm.id);
                                                         return (
                                                             <div
                                                                 key={perm.id}
+                                                                onClick={() => !isLocked && togglePermission(perm.id)}
                                                                 className={`p-3 rounded-xl border flex items-start gap-3 transition-all ${
-                                                                    isGranted
-                                                                        ? 'bg-blue-950/20 border-blue-500/30 text-white'
-                                                                        : 'bg-slate-900/30 border-slate-800/50 text-slate-500 opacity-50'
+                                                                    isLocked ? 'cursor-default opacity-90' : 'cursor-pointer'
+                                                                } ${
+                                                                    isChecked
+                                                                        ? 'bg-blue-950/30 border-blue-500/40 text-white'
+                                                                        : 'bg-slate-900/40 border-slate-800/80 text-slate-400 hover:border-slate-700'
                                                                 }`}
                                                             >
-                                                                <div className={`mt-0.5 h-4 w-4 rounded flex items-center justify-center flex-shrink-0 ${
-                                                                    isGranted
+                                                                <div className={`mt-0.5 h-4 w-4 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
+                                                                    isChecked
                                                                         ? 'bg-blue-600 text-white'
-                                                                        : 'border border-slate-700 bg-slate-800'
+                                                                        : 'border border-slate-600 bg-slate-800'
                                                                 }`}>
-                                                                    {isGranted && <CheckIcon className="h-3 w-3 stroke-[3]" />}
+                                                                    {isChecked && <CheckIcon className="h-3 w-3 stroke-[3]" />}
                                                                 </div>
                                                                 <div className="overflow-hidden">
-                                                                    <p className={`text-xs font-semibold leading-tight ${isGranted ? 'text-white' : 'text-slate-500 line-through'}`}>
-                                                                        {perm.name}
-                                                                    </p>
+                                                                    <p className="text-xs font-semibold text-white leading-tight">{perm.name}</p>
                                                                     <p className="text-[10px] font-mono text-slate-500 mt-0.5">{perm.slug}</p>
                                                                 </div>
                                                             </div>
@@ -389,18 +694,27 @@ const Roles = () => {
                                     );
                                 })}
                             </div>
-                        </div>
 
-                        {/* Modal Footer */}
-                        <div className="p-4 border-t border-slate-800 flex justify-end sticky bottom-0 bg-slate-900">
-                            <button
-                                type="button"
-                                onClick={() => setShowModal(false)}
-                                className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-semibold transition-colors"
-                            >
-                                Close
-                            </button>
-                        </div>
+                            {/* Modal Footer Buttons */}
+                            <div className="pt-4 border-t border-slate-800 flex justify-end space-x-3 sticky bottom-0 bg-slate-900 pb-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowModal(false)}
+                                    className="px-6 py-2.5 text-sm font-semibold text-slate-400 hover:text-white transition-colors"
+                                >
+                                    {isEditMode && isSuperAdmin ? 'Cancel' : 'Close'}
+                                </button>
+                                {isEditMode && isSuperAdmin && (
+                                    <button
+                                        type="submit"
+                                        disabled={submitting}
+                                        className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                                    >
+                                        {submitting ? 'Saving Role...' : modalMode === 'edit' ? 'Update Role & Permissions' : 'Create Role'}
+                                    </button>
+                                )}
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
