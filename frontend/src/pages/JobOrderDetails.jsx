@@ -168,615 +168,562 @@ const JobOrderDetails = () => {
         }
     };
 
+    const printHtmlInvoice = (title, contentHtml) => {
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentWindow.document;
+        doc.open();
+        doc.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <title>${title}</title>
+                <style>
+                    @page {
+                        size: A4 portrait;
+                        margin: 12mm 15mm;
+                    }
+                    * {
+                        box-sizing: border-box;
+                    }
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                        color: #1e293b;
+                        margin: 0;
+                        padding: 0;
+                        font-size: 12px;
+                        line-height: 1.4;
+                        background: #fff;
+                    }
+                    .invoice-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                        border-bottom: 2px solid #e2e8f0;
+                        padding-bottom: 12px;
+                        margin-bottom: 16px;
+                    }
+                    .brand-title {
+                        font-size: 20px;
+                        font-weight: 800;
+                        color: #0f172a;
+                        margin: 0 0 4px 0;
+                    }
+                    .brand-sub {
+                        font-size: 10px;
+                        color: #64748b;
+                        margin: 0;
+                    }
+                    .doc-meta {
+                        text-align: right;
+                    }
+                    .doc-badge {
+                        font-size: 16px;
+                        font-weight: 800;
+                        margin: 0 0 4px 0;
+                    }
+                    .doc-number {
+                        font-size: 11px;
+                        color: #475569;
+                        margin: 2px 0;
+                    }
+                    .info-grid {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 16px;
+                        margin-bottom: 16px;
+                    }
+                    .info-card {
+                        background: #f8fafc;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 8px;
+                        padding: 10px 14px;
+                    }
+                    .info-card h4 {
+                        margin: 0 0 6px 0;
+                        font-size: 10px;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                        color: #475569;
+                        border-bottom: 1px solid #cbd5e1;
+                        padding-bottom: 4px;
+                    }
+                    .info-card p {
+                        margin: 3px 0;
+                        font-size: 11px;
+                        color: #334155;
+                    }
+                    .banner-box {
+                        padding: 8px 12px;
+                        border-radius: 8px;
+                        margin-bottom: 16px;
+                        font-size: 11px;
+                    }
+                    .items-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 16px;
+                    }
+                    .items-table th {
+                        background: #1e293b;
+                        color: #ffffff;
+                        text-align: left;
+                        padding: 8px 10px;
+                        font-size: 10px;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }
+                    .items-table td {
+                        padding: 8px 10px;
+                        border-bottom: 1px solid #e2e8f0;
+                        font-size: 11px;
+                    }
+                    .items-table tr:nth-child(even) td {
+                        background: #f8fafc;
+                    }
+                    .text-right { text-align: right; }
+                    .text-center { text-align: center; }
+                    .totals-box {
+                        margin-left: auto;
+                        width: 280px;
+                        background: #f8fafc;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 8px;
+                        padding: 10px 14px;
+                        margin-bottom: 20px;
+                    }
+                    .total-line {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-bottom: 4px;
+                        font-size: 11px;
+                    }
+                    .grand-total {
+                        font-size: 14px;
+                        font-weight: 800;
+                        color: #0f172a;
+                        border-top: 1px solid #cbd5e1;
+                        padding-top: 6px;
+                        margin-top: 6px;
+                    }
+                    .signatures {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-top: 30px;
+                        margin-bottom: 20px;
+                    }
+                    .signature-box {
+                        width: 200px;
+                        text-align: center;
+                        border-top: 1px solid #94a3b8;
+                        padding-top: 6px;
+                        font-size: 10px;
+                        color: #64748b;
+                    }
+                    .footer-text {
+                        text-align: center;
+                        font-size: 9px;
+                        color: #94a3b8;
+                        border-top: 1px dashed #cbd5e1;
+                        padding-top: 10px;
+                        margin-top: 16px;
+                    }
+                    @media print {
+                        body {
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                ${contentHtml}
+            </body>
+            </html>
+        `);
+        doc.close();
+
+        setTimeout(() => {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+            setTimeout(() => {
+                if (document.body.contains(iframe)) {
+                    document.body.removeChild(iframe);
+                }
+            }, 1500);
+        }, 250);
+    };
+
     const generateInvoice = () => {
-        const doc = new jsPDF();
-        const now = new Date();
-        const dateStr = now.toLocaleDateString();
-
-        // Header
-        doc.setFontSize(22);
-        doc.setTextColor(30, 41, 59);
-        doc.text('INVOICE', 14, 22);
-
-        doc.setFontSize(10);
-        doc.setTextColor(100, 116, 139);
-        doc.text('Car Shop Management System', 14, 28);
-        doc.text('123 Service Road, Auto City', 14, 33);
-
-        // Invoice Info
-        doc.setFontSize(11);
-        doc.setTextColor(30, 41, 59);
-        doc.text(`Invoice #: INV-${(order.order_number || '').split('-')[1] || order.order_number}`, 140, 22);
-        doc.text(`Date: ${dateStr}`, 140, 28);
-        doc.text(`Order #: ${order.order_number}`, 140, 34);
-
-        // Horizontal Line
-        doc.setDrawColor(226, 232, 240);
-        doc.line(14, 40, 196, 40);
-
-        // Bill To / Vehicle Info
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text('CUSTOMER DETAILS', 14, 50);
-        doc.text('VEHICLE DETAILS', 110, 50);
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.text(order.customer?.full_name || 'N/A', 14, 57);
-        doc.text(order.customer?.contact_number || 'N/A', 14, 62);
-        doc.text(order.customer?.address || 'N/A', 14, 67, { maxWidth: 80 });
-
-        doc.text(`Plate: ${order.vehicle?.plate_number || 'N/A'}`, 110, 57);
-        doc.text(`Unit: ${order.vehicle?.brand || ''} ${order.vehicle?.model || ''} (${order.vehicle?.year || 'N/A'})`, 110, 62);
-        doc.text(`VIN: ${order.vehicle?.vin || 'N/A'}`, 110, 67);
-
-        // Service Table
-        const tableBody = orderItems.map(item => [
-            item.description || 'N/A',
-            item.quantity,
-            `Php ${parseFloat(item.unit_price || 0).toLocaleString()}`,
-            `Php ${parseFloat(item.total_price || (item.quantity * item.unit_price) || 0).toLocaleString()}`
-        ]);
-
-        if (tableBody.length === 0) {
-            tableBody.push([{ content: 'No parts or services recorded.', colSpan: 4, styles: { halign: 'center' } }]);
-        }
-
-        autoTable(doc, {
-            startY: 80,
-            head: [['Description', 'Qty', 'Unit Price', 'Total']],
-            body: tableBody,
-            theme: 'grid',
-            headStyles: { fillColor: [30, 41, 59], fontStyle: 'bold' },
-            columnStyles: {
-                0: { cellWidth: 90 },
-                1: { halign: 'center' },
-                2: { halign: 'right' },
-                3: { halign: 'right', fontStyle: 'bold' }
-            }
-        });
-
-        // Summary
+        const now = new Date().toLocaleDateString();
+        const invNum = `INV-${(order.order_number || '').split('-')[1] || order.order_number}`;
         const calculatedItemsTotal = orderItems.reduce((sum, item) => sum + parseFloat(item.total_price || (item.quantity * item.unit_price) || 0), 0);
         const finalTotal = parseFloat(order.actual_cost || order.estimated_cost || calculatedItemsTotal || 0);
-        const finalY = doc.lastAutoTable.finalY + 10;
 
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text('TOTAL DUE:', 140, finalY);
-        doc.text(`Php ${finalTotal.toLocaleString()}`, 196, finalY, { align: 'right' });
+        const rows = orderItems.length > 0 ? orderItems.map((item, idx) => `
+            <tr>
+                <td class="text-center">${idx + 1}</td>
+                <td><strong>${item.description || 'N/A'}</strong></td>
+                <td class="text-center">${item.quantity}</td>
+                <td class="text-right">Php ${parseFloat(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td class="text-right font-bold">Php ${parseFloat(item.total_price || (item.quantity * item.unit_price) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            </tr>
+        `).join('') : `<tr><td colspan="5" class="text-center">No parts or services recorded.</td></tr>`;
 
-        // Notes
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'italic');
-        doc.setTextColor(100, 116, 139);
-        doc.text('Thank you for your business! Please keep this invoice for your warranty records.', 14, finalY + 20);
+        const html = `
+            <div class="invoice-header">
+                <div>
+                    <h1 class="brand-title">CarShop ERP</h1>
+                    <p class="brand-sub">Car Shop Management & Repair System</p>
+                    <p class="brand-sub">123 Service Road, Auto City | Tel: (02) 8123-4567</p>
+                </div>
+                <div class="doc-meta">
+                    <div class="doc-badge" style="color: #0f172a;">INVOICE</div>
+                    <div class="doc-number"><strong>Invoice #:</strong> ${invNum}</div>
+                    <div class="doc-number"><strong>Date:</strong> ${now}</div>
+                    <div class="doc-number"><strong>Order #:</strong> ${order.order_number}</div>
+                </div>
+            </div>
 
-        // Footer
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.text('System Generated Invoice', doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+            <div class="info-grid">
+                <div class="info-card">
+                    <h4>Customer Details</h4>
+                    <p><strong>Name:</strong> ${order.customer?.full_name || 'Walk-in Customer'}</p>
+                    <p><strong>Contact:</strong> ${order.customer?.contact_number || 'N/A'}</p>
+                    <p><strong>Address:</strong> ${order.customer?.address || 'N/A'}</p>
+                </div>
+                <div class="info-card">
+                    <h4>Vehicle Details</h4>
+                    <p><strong>Plate No:</strong> ${order.vehicle?.plate_number || 'N/A'}</p>
+                    <p><strong>Unit:</strong> ${order.vehicle?.brand || ''} ${order.vehicle?.model || ''} (${order.vehicle?.year || 'N/A'})</p>
+                    <p><strong>VIN:</strong> ${order.vehicle?.vin || 'N/A'}</p>
+                </div>
+            </div>
 
-        doc.autoPrint();
-        const blobUrl = URL.createObjectURL(doc.output('blob'));
-        window.open(blobUrl, '_blank');
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 30px;" class="text-center">#</th>
+                        <th>Description</th>
+                        <th style="width: 50px;" class="text-center">Qty</th>
+                        <th style="width: 100px;" class="text-right">Unit Price</th>
+                        <th style="width: 110px;" class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>
+
+            <div class="totals-box">
+                <div class="total-line">
+                    <span>Subtotal:</span>
+                    <span>Php ${finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div class="total-line grand-total">
+                    <span>TOTAL DUE:</span>
+                    <span style="color: #2563eb;">Php ${finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+            </div>
+
+            <div class="signatures">
+                <div class="signature-box">Service Advisor Signature</div>
+                <div class="signature-box">Customer Conforme / Signature</div>
+            </div>
+
+            <div class="footer-text">
+                Thank you for your business! Please keep this invoice for your warranty records.<br>
+                CarShop ERP System Generated Document
+            </div>
+        `;
+
+        printHtmlInvoice(`Invoice_${order.order_number}`, html);
     };
 
     const printTemporaryInvoice = () => {
-        const doc = new jsPDF();
-        const now = new Date();
-        const dateStr = now.toLocaleDateString();
-
-        // Header Background Banner
-        doc.setFillColor(248, 250, 252);
-        doc.rect(14, 12, 182, 28, 'F');
-        doc.setDrawColor(226, 232, 240);
-        doc.rect(14, 12, 182, 28, 'S');
-
-        // Company Branding
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(30, 41, 59);
-        doc.text('CarShop ERP', 20, 22);
-
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(100, 116, 139);
-        doc.text('Car Shop Management & Repair System', 20, 28);
-        doc.text('123 Service Road, Auto City | Tel: (02) 8123-4567', 20, 34);
-
-        // Document Title Badge
-        doc.setFontSize(13);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(217, 119, 6); // Amber-600
-        doc.text('TEMPORARY INVOICE', 190, 21, { align: 'right' });
-
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(180, 83, 9);
-        doc.text('[ DRAFT / ESTIMATE BILLING ]', 190, 26, { align: 'right' });
-
-        doc.setFontSize(8.5);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(71, 85, 105);
-        doc.text(`Temp Inv #: TINV-${(order.order_number || '').replace(/^JO-/, '')}`, 190, 31, { align: 'right' });
-        doc.text(`Date: ${dateStr} | JO #: ${order.order_number}`, 190, 36, { align: 'right' });
-
-        // Info Cards (Customer & Vehicle)
-        doc.setFillColor(241, 245, 249);
-        doc.roundedRect(14, 44, 88, 32, 2, 2, 'F');
-        doc.roundedRect(108, 44, 88, 32, 2, 2, 'F');
-
-        // Customer Info
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(30, 41, 59);
-        doc.text('BILL TO / CUSTOMER', 18, 51);
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(71, 85, 105);
-        doc.text(order.customer?.full_name || 'Walk-in Customer', 18, 57);
-        doc.text(`Contact: ${order.customer?.contact_number || 'N/A'}`, 18, 63);
-        doc.text(`Address: ${order.customer?.address || 'N/A'}`, 18, 69, { maxWidth: 80 });
-
-        // Vehicle Info
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.setTextColor(30, 41, 59);
-        doc.text('VEHICLE INFORMATION', 112, 51);
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(71, 85, 105);
-        doc.text(`Plate No: ${order.vehicle?.plate_number || 'N/A'}`, 112, 57);
-        doc.text(`Model: ${order.vehicle?.brand || ''} ${order.vehicle?.model || ''} (${order.vehicle?.year || 'N/A'})`, 112, 63);
-        doc.text(`VIN: ${order.vehicle?.vin || 'N/A'}`, 112, 69);
-
-        // Service Table with Amounts
-        const tableBody = orderItems.map((item, idx) => [
-            idx + 1,
-            item.description || 'N/A',
-            (item.item_type || 'part').toUpperCase(),
-            item.quantity,
-            `Php ${parseFloat(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            `Php ${parseFloat(item.total_price || (item.quantity * item.unit_price) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-        ]);
-
-        if (tableBody.length === 0) {
-            tableBody.push([{ content: 'No parts or services recorded.', colSpan: 6, styles: { halign: 'center' } }]);
-        }
-
-        autoTable(doc, {
-            startY: 81,
-            head: [['#', 'Item / Service Description', 'Type', 'Qty', 'Unit Price', 'Total Amount']],
-            body: tableBody,
-            theme: 'grid',
-            headStyles: { fillColor: [30, 41, 59], fontStyle: 'bold', fontSize: 9 },
-            styles: { fontSize: 8.5, textColor: [51, 65, 85], cellPadding: 2.5 },
-            columnStyles: {
-                0: { cellWidth: 10, halign: 'center' },
-                1: { cellWidth: 78 },
-                2: { cellWidth: 22, halign: 'center' },
-                3: { cellWidth: 16, halign: 'center' },
-                4: { cellWidth: 28, halign: 'right' },
-                5: { cellWidth: 28, halign: 'right', fontStyle: 'bold' }
-            }
-        });
-
-        // Totals & Summary
+        const now = new Date().toLocaleDateString();
+        const tempInvNum = `TINV-${(order.order_number || '').replace(/^JO-/, '')}`;
         const calculatedItemsTotal = orderItems.reduce((sum, item) => sum + parseFloat(item.total_price || (item.quantity * item.unit_price) || 0), 0);
         const finalTotal = parseFloat(order.actual_cost || order.estimated_cost || calculatedItemsTotal || 0);
-        const finalY = doc.lastAutoTable.finalY + 8;
 
-        doc.setFillColor(248, 250, 252);
-        doc.rect(116, finalY, 80, 22, 'F');
-        doc.setDrawColor(226, 232, 240);
-        doc.rect(116, finalY, 80, 22, 'S');
+        const rows = orderItems.length > 0 ? orderItems.map((item, idx) => `
+            <tr>
+                <td class="text-center">${idx + 1}</td>
+                <td><strong>${item.description || 'N/A'}</strong></td>
+                <td class="text-center">${(item.item_type || 'part').toUpperCase()}</td>
+                <td class="text-center">${item.quantity}</td>
+                <td class="text-right">Php ${parseFloat(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td class="text-right font-bold">Php ${parseFloat(item.total_price || (item.quantity * item.unit_price) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            </tr>
+        `).join('') : `<tr><td colspan="6" class="text-center">No parts or services recorded.</td></tr>`;
 
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(100, 116, 139);
-        doc.text('STATUS:', 120, finalY + 7);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(30, 41, 59);
-        doc.text((order.status || 'PENDING').toUpperCase(), 190, finalY + 7, { align: 'right' });
+        const html = `
+            <div class="invoice-header">
+                <div>
+                    <h1 class="brand-title">CarShop ERP</h1>
+                    <p class="brand-sub">Car Shop Management & Repair System</p>
+                    <p class="brand-sub">123 Service Road, Auto City | Tel: (02) 8123-4567</p>
+                </div>
+                <div class="doc-meta">
+                    <div class="doc-badge" style="color: #d97706;">TEMPORARY INVOICE</div>
+                    <div style="font-size: 9px; font-weight: bold; color: #b45309; margin-bottom: 4px;">[ DRAFT / ESTIMATE BILLING ]</div>
+                    <div class="doc-number"><strong>Temp Inv #:</strong> ${tempInvNum}</div>
+                    <div class="doc-number"><strong>Date:</strong> ${now}</div>
+                    <div class="doc-number"><strong>JO #:</strong> ${order.order_number}</div>
+                </div>
+            </div>
 
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(217, 119, 6);
-        doc.text('TOTAL DUE:', 120, finalY + 16);
-        doc.text(`Php ${finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 190, finalY + 16, { align: 'right' });
+            <div class="info-grid">
+                <div class="info-card">
+                    <h4>Bill To / Customer</h4>
+                    <p><strong>Name:</strong> ${order.customer?.full_name || 'Walk-in Customer'}</p>
+                    <p><strong>Contact:</strong> ${order.customer?.contact_number || 'N/A'}</p>
+                    <p><strong>Address:</strong> ${order.customer?.address || 'N/A'}</p>
+                </div>
+                <div class="info-card">
+                    <h4>Vehicle Information</h4>
+                    <p><strong>Plate No:</strong> ${order.vehicle?.plate_number || 'N/A'}</p>
+                    <p><strong>Model:</strong> ${order.vehicle?.brand || ''} ${order.vehicle?.model || ''} (${order.vehicle?.year || 'N/A'})</p>
+                    <p><strong>VIN:</strong> ${order.vehicle?.vin || 'N/A'}</p>
+                </div>
+            </div>
 
-        // Signatures
-        const signY = finalY + 36;
-        doc.setDrawColor(148, 163, 184);
-        doc.line(20, signY, 80, signY);
-        doc.line(120, signY, 180, signY);
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 30px;" class="text-center">#</th>
+                        <th>Item / Service Description</th>
+                        <th style="width: 70px;" class="text-center">Type</th>
+                        <th style="width: 50px;" class="text-center">Qty</th>
+                        <th style="width: 100px;" class="text-right">Unit Price</th>
+                        <th style="width: 110px;" class="text-right">Total Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>
 
-        doc.setFontSize(8.5);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(100, 116, 139);
-        doc.text(`Prepared by: ${order.advisor?.name || 'Service Advisor'}`, 20, signY + 5);
-        doc.text('Customer Conforme / Signature', 120, signY + 5);
+            <div class="totals-box">
+                <div class="total-line">
+                    <span>Status:</span>
+                    <span style="font-weight: bold;">${(order.status || 'PENDING').toUpperCase()}</span>
+                </div>
+                <div class="total-line grand-total">
+                    <span style="color: #d97706;">TOTAL DUE:</span>
+                    <span style="color: #d97706;">Php ${finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+            </div>
 
-        // Disclaimer
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'italic');
-        doc.setTextColor(148, 163, 184);
-        doc.text(
-            '* NOTICE: This is a Temporary Invoice for estimation and billing review. Amounts may vary upon final vehicle release. Not an official receipt.',
-            14,
-            signY + 16
-        );
+            <div class="signatures">
+                <div class="signature-box">Prepared by: ${order.advisor?.name || 'Service Advisor'}</div>
+                <div class="signature-box">Customer Conforme / Signature</div>
+            </div>
 
-        // Footer
-        doc.setFont('helvetica', 'normal');
-        doc.text('CarShop ERP System Generated Document', doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
+            <div class="footer-text">
+                * NOTICE: This is a Temporary Invoice for estimation and billing review. Amounts may vary upon final vehicle release. Not an official receipt.<br>
+                CarShop ERP System Generated Document
+            </div>
+        `;
 
-        // Print Only
-        doc.autoPrint();
-        const blobUrl = URL.createObjectURL(doc.output('blob'));
-        window.open(blobUrl, '_blank');
+        printHtmlInvoice(`Temporary_Invoice_${order.order_number}`, html);
     };
 
     const printServiceInvoice = () => {
-        const doc = new jsPDF();
-        const now = new Date();
-        const dateStr = now.toLocaleDateString();
-
-        // Header Background Banner
-        doc.setFillColor(248, 250, 252);
-        doc.rect(14, 12, 182, 28, 'F');
-        doc.setDrawColor(226, 232, 240);
-        doc.rect(14, 12, 182, 28, 'S');
-
-        // Company Branding
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(30, 41, 59);
-        doc.text('CarShop ERP', 20, 22);
-
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(100, 116, 139);
-        doc.text('Car Shop Management & Repair System', 20, 28);
-        doc.text('123 Service Road, Auto City | Tel: (02) 8123-4567', 20, 34);
-
-        // Document Title Badge
-        doc.setFontSize(13);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(37, 99, 235); // Blue-600
-        doc.text('SERVICE INVOICE', 190, 21, { align: 'right' });
-
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(30, 64, 175);
-        doc.text('[ WORK ORDER & SERVICE RECORD ]', 190, 26, { align: 'right' });
-
-        doc.setFontSize(8.5);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(71, 85, 105);
-        doc.text(`Service Inv #: SRV-${(order.order_number || '').replace(/^JO-/, '')}`, 190, 31, { align: 'right' });
-        doc.text(`Date: ${dateStr} | JO #: ${order.order_number}`, 190, 36, { align: 'right' });
-
-        // Info Cards (Customer & Vehicle)
-        doc.setFillColor(241, 245, 249);
-        doc.roundedRect(14, 44, 88, 32, 2, 2, 'F');
-        doc.roundedRect(108, 44, 88, 32, 2, 2, 'F');
-
-        // Customer Info
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(30, 41, 59);
-        doc.text('CUSTOMER DETAILS', 18, 51);
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(71, 85, 105);
-        doc.text(order.customer?.full_name || 'Walk-in Customer', 18, 57);
-        doc.text(`Contact: ${order.customer?.contact_number || 'N/A'}`, 18, 63);
-        doc.text(`Address: ${order.customer?.address || 'N/A'}`, 18, 69, { maxWidth: 80 });
-
-        // Vehicle Info
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.setTextColor(30, 41, 59);
-        doc.text('VEHICLE DETAILS', 112, 51);
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(71, 85, 105);
-        doc.text(`Plate No: ${order.vehicle?.plate_number || 'N/A'}`, 112, 57);
-        doc.text(`Model: ${order.vehicle?.brand || ''} ${order.vehicle?.model || ''} (${order.vehicle?.year || 'N/A'})`, 112, 63);
-        doc.text(`VIN: ${order.vehicle?.vin || 'N/A'}`, 112, 69);
-
-        // Complaint & Diagnosis section if present
-        let tableStartY = 81;
-        if (order.description || order.diagnosis) {
-            doc.setFillColor(248, 250, 252);
-            doc.roundedRect(14, 80, 182, 16, 2, 2, 'F');
-            doc.setDrawColor(226, 232, 240);
-            doc.roundedRect(14, 80, 182, 16, 2, 2, 'S');
-
-            doc.setFontSize(8.5);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(51, 65, 85);
-            doc.text('Service Scope / Complaint:', 18, 86);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(100, 116, 139);
-            doc.text(order.description || 'General inspection & repair', 64, 86, { maxWidth: 126 });
-
-            if (order.diagnosis) {
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(51, 65, 85);
-                doc.text('Diagnosis / Action:', 18, 92);
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(100, 116, 139);
-                doc.text(order.diagnosis, 54, 92, { maxWidth: 136 });
-            }
-
-            tableStartY = 101;
-        }
-
-        // Service Table (NO AMOUNT)
-        const tableBody = orderItems.map((item, idx) => [
-            idx + 1,
-            item.description || 'N/A',
-            (item.item_type || 'part').toUpperCase(),
-            item.quantity,
-            'Verified / Installed'
-        ]);
-
-        if (tableBody.length === 0) {
-            tableBody.push([{ content: 'No parts or services recorded.', colSpan: 5, styles: { halign: 'center' } }]);
-        }
-
-        autoTable(doc, {
-            startY: tableStartY,
-            head: [['#', 'Part / Service Description', 'Type', 'Qty', 'Verification Status']],
-            body: tableBody,
-            theme: 'grid',
-            headStyles: { fillColor: [30, 41, 59], fontStyle: 'bold', fontSize: 9 },
-            styles: { fontSize: 8.5, textColor: [51, 65, 85], cellPadding: 2.8 },
-            columnStyles: {
-                0: { cellWidth: 12, halign: 'center' },
-                1: { cellWidth: 95 },
-                2: { cellWidth: 25, halign: 'center' },
-                3: { cellWidth: 18, halign: 'center' },
-                4: { cellWidth: 32, halign: 'center' }
-            }
-        });
-
-        // Operational Summary (NO AMOUNT / NO MONETARY VALUE)
-        const finalY = doc.lastAutoTable.finalY + 8;
-        doc.setFillColor(248, 250, 252);
-        doc.rect(14, finalY, 182, 16, 'F');
-        doc.setDrawColor(226, 232, 240);
-        doc.rect(14, finalY, 182, 16, 'S');
-
-        doc.setFontSize(8.5);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(51, 65, 85);
-        doc.text('WORK ORDER SUMMARY:', 18, finalY + 6);
-
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(100, 116, 139);
+        const now = new Date().toLocaleDateString();
+        const srvInvNum = `SRV-${(order.order_number || '').replace(/^JO-/, '')}`;
         const partsCount = orderItems.filter(i => (i.item_type || 'part') === 'part').length;
         const laborCount = orderItems.filter(i => (i.item_type || 'part') !== 'part').length;
-        doc.text(`Total Parts Used: ${partsCount} item(s)  |  Labor Operations: ${laborCount} service(s)  |  Order Status: ${(order.status || '').toUpperCase()}`, 18, finalY + 11);
 
-        // Signatures (Technician, Advisor, Customer)
-        const signY = finalY + 34;
-        doc.setDrawColor(148, 163, 184);
-        doc.line(14, signY, 64, signY);
-        doc.line(76, signY, 126, signY);
-        doc.line(136, signY, 196, signY);
+        const rows = orderItems.length > 0 ? orderItems.map((item, idx) => `
+            <tr>
+                <td class="text-center">${idx + 1}</td>
+                <td><strong>${item.description || 'N/A'}</strong></td>
+                <td class="text-center">${(item.item_type || 'part').toUpperCase()}</td>
+                <td class="text-center">${item.quantity}</td>
+                <td class="text-center" style="color: #16a34a; font-weight: 600;">Verified / Installed</td>
+            </tr>
+        `).join('') : `<tr><td colspan="5" class="text-center">No parts or services recorded.</td></tr>`;
 
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(100, 116, 139);
-        doc.text(`Technician: ${order.mechanic?.name || '___________________'}`, 14, signY + 5);
-        doc.text(`Service Advisor: ${order.advisor?.name || '___________________'}`, 76, signY + 5);
-        doc.text('Customer Vehicle Acceptance', 136, signY + 5);
+        const html = `
+            <div class="invoice-header">
+                <div>
+                    <h1 class="brand-title">CarShop ERP</h1>
+                    <p class="brand-sub">Car Shop Management & Repair System</p>
+                    <p class="brand-sub">123 Service Road, Auto City | Tel: (02) 8123-4567</p>
+                </div>
+                <div class="doc-meta">
+                    <div class="doc-badge" style="color: #2563eb;">SERVICE INVOICE</div>
+                    <div style="font-size: 9px; font-weight: bold; color: #1d4ed8; margin-bottom: 4px;">[ WORK ORDER & SERVICE RECORD ]</div>
+                    <div class="doc-number"><strong>Service Inv #:</strong> ${srvInvNum}</div>
+                    <div class="doc-number"><strong>Date:</strong> ${now}</div>
+                    <div class="doc-number"><strong>JO #:</strong> ${order.order_number}</div>
+                </div>
+            </div>
 
-        // Disclaimer
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'italic');
-        doc.setTextColor(148, 163, 184);
-        doc.text(
-            '* NOTE: This Service Invoice is an official technical record of services rendered and parts installed. No monetary amounts are stated.',
-            14,
-            signY + 16
-        );
+            <div class="info-grid">
+                <div class="info-card">
+                    <h4>Customer Details</h4>
+                    <p><strong>Name:</strong> ${order.customer?.full_name || 'Walk-in Customer'}</p>
+                    <p><strong>Contact:</strong> ${order.customer?.contact_number || 'N/A'}</p>
+                    <p><strong>Address:</strong> ${order.customer?.address || 'N/A'}</p>
+                </div>
+                <div class="info-card">
+                    <h4>Vehicle Details</h4>
+                    <p><strong>Plate No:</strong> ${order.vehicle?.plate_number || 'N/A'}</p>
+                    <p><strong>Model:</strong> ${order.vehicle?.brand || ''} ${order.vehicle?.model || ''} (${order.vehicle?.year || 'N/A'})</p>
+                    <p><strong>VIN:</strong> ${order.vehicle?.vin || 'N/A'}</p>
+                </div>
+            </div>
 
-        // Footer
-        doc.setFont('helvetica', 'normal');
-        doc.text('CarShop ERP System Generated Document', doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
+            ${(order.description || order.diagnosis) ? `
+                <div class="banner-box" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                    <p style="margin: 2px 0;"><strong>Service Scope:</strong> ${order.description || 'General inspection & repair'}</p>
+                    ${order.diagnosis ? `<p style="margin: 2px 0;"><strong>Diagnosis / Action:</strong> ${order.diagnosis}</p>` : ''}
+                </div>
+            ` : ''}
 
-        // Print Only
-        doc.autoPrint();
-        const blobUrl = URL.createObjectURL(doc.output('blob'));
-        window.open(blobUrl, '_blank');
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 30px;" class="text-center">#</th>
+                        <th>Part / Service Description</th>
+                        <th style="width: 80px;" class="text-center">Type</th>
+                        <th style="width: 50px;" class="text-center">Qty</th>
+                        <th style="width: 140px;" class="text-center">Verification Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>
+
+            <div class="banner-box" style="background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: 25px;">
+                <strong>WORK ORDER SUMMARY:</strong> Total Parts: ${partsCount} item(s) | Labor Operations: ${laborCount} service(s) | Status: ${(order.status || '').toUpperCase()}
+            </div>
+
+            <div class="signatures">
+                <div class="signature-box">Technician: ${order.mechanic?.name || '___________________'}</div>
+                <div class="signature-box">Service Advisor: ${order.advisor?.name || '___________________'}</div>
+                <div class="signature-box">Customer Vehicle Acceptance</div>
+            </div>
+
+            <div class="footer-text">
+                * NOTE: This Service Invoice is an official technical record of services rendered and parts installed. No monetary amounts are stated.<br>
+                CarShop ERP System Generated Document
+            </div>
+        `;
+
+        printHtmlInvoice(`Service_Invoice_${order.order_number}`, html);
     };
 
     const printCancelledInvoice = () => {
-        const doc = new jsPDF();
-        const now = new Date();
-        const dateStr = now.toLocaleDateString();
-
-        // Red Header Banner
-        doc.setFillColor(254, 242, 242);
-        doc.rect(14, 12, 182, 30, 'F');
-        doc.setDrawColor(239, 68, 68);
-        doc.rect(14, 12, 182, 30, 'S');
-
-        // Company Branding
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(30, 41, 59);
-        doc.text('CarShop ERP', 20, 22);
-
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(100, 116, 139);
-        doc.text('Car Shop Management & Repair System', 20, 28);
-        doc.text('123 Service Road, Auto City | Tel: (02) 8123-4567', 20, 34);
-
-        // Document Title Badge
-        doc.setFontSize(13);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(220, 38, 38); // Red-600
-        doc.text('CANCELLED INVOICE', 190, 21, { align: 'right' });
-
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(185, 28, 28);
-        doc.text('[ VOIDED - NO PAYMENT DUE ]', 190, 26, { align: 'right' });
-
-        doc.setFontSize(8.5);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(71, 85, 105);
-        doc.text(`Invoice #: INV-${(order.order_number || '').replace(/^JO-/, '')} (VOID)`, 190, 31, { align: 'right' });
-        doc.text(`Date: ${dateStr} | JO #: ${order.order_number}`, 190, 36, { align: 'right' });
-
-        // Red Cancellation Notice Box
-        doc.setFillColor(254, 226, 226);
-        doc.roundedRect(14, 46, 182, 18, 2, 2, 'F');
-        doc.setDrawColor(248, 113, 113);
-        doc.roundedRect(14, 46, 182, 18, 2, 2, 'S');
-
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(185, 28, 28);
-        doc.text('NOTICE OF INVOICE CANCELLATION:', 18, 52);
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.5);
-        doc.setTextColor(153, 27, 27);
-        const reasonText = order.cancellation_reason ? `Reason: ${order.cancellation_reason}` : 'Reason: Order cancelled by authorized user.';
-        const cancelDateText = order.cancelled_at ? `Cancelled on: ${new Date(order.cancelled_at).toLocaleString()}` : `Cancelled on: ${dateStr}`;
-        doc.text(`${reasonText} | ${cancelDateText}`, 18, 58, { maxWidth: 174 });
-
-        // Info Cards (Customer & Vehicle)
-        doc.setFillColor(241, 245, 249);
-        doc.roundedRect(14, 68, 88, 30, 2, 2, 'F');
-        doc.roundedRect(108, 68, 88, 30, 2, 2, 'F');
-
-        // Customer Info
-        doc.setFontSize(9.5);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(30, 41, 59);
-        doc.text('CUSTOMER DETAILS', 18, 74);
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.5);
-        doc.setTextColor(71, 85, 105);
-        doc.text(order.customer?.full_name || 'Walk-in Customer', 18, 80);
-        doc.text(`Contact: ${order.customer?.contact_number || 'N/A'}`, 18, 85);
-        doc.text(`Address: ${order.customer?.address || 'N/A'}`, 18, 90, { maxWidth: 80 });
-
-        // Vehicle Info
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9.5);
-        doc.setTextColor(30, 41, 59);
-        doc.text('VEHICLE DETAILS', 112, 74);
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.5);
-        doc.setTextColor(71, 85, 105);
-        doc.text(`Plate No: ${order.vehicle?.plate_number || 'N/A'}`, 112, 80);
-        doc.text(`Model: ${order.vehicle?.brand || ''} ${order.vehicle?.model || ''} (${order.vehicle?.year || 'N/A'})`, 112, 85);
-        doc.text(`VIN: ${order.vehicle?.vin || 'N/A'}`, 112, 90);
-
-        // Service Table
-        const tableBody = orderItems.map((item, idx) => [
-            idx + 1,
-            `${item.description || 'N/A'} [VOID]`,
-            (item.item_type || 'part').toUpperCase(),
-            item.quantity,
-            `Php ${parseFloat(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            'Php 0.00'
-        ]);
-
-        if (tableBody.length === 0) {
-            tableBody.push([{ content: 'No items recorded on this cancelled invoice.', colSpan: 6, styles: { halign: 'center' } }]);
-        }
-
-        autoTable(doc, {
-            startY: 102,
-            head: [['#', 'Item / Service Description', 'Type', 'Qty', 'Original Unit Price', 'Amount Due']],
-            body: tableBody,
-            theme: 'grid',
-            headStyles: { fillColor: [71, 85, 105], fontStyle: 'bold', fontSize: 9 },
-            styles: { fontSize: 8.5, textColor: [100, 116, 139], cellPadding: 2.5 },
-            columnStyles: {
-                0: { cellWidth: 10, halign: 'center' },
-                1: { cellWidth: 78 },
-                2: { cellWidth: 22, halign: 'center' },
-                3: { cellWidth: 16, halign: 'center' },
-                4: { cellWidth: 28, halign: 'right' },
-                5: { cellWidth: 28, halign: 'right', fontStyle: 'bold', textColor: [220, 38, 38] }
-            }
-        });
-
-        // Totals & Summary
+        const now = new Date().toLocaleDateString();
+        const voidInvNum = `INV-${(order.order_number || '').replace(/^JO-/, '')} (VOID)`;
         const calculatedItemsTotal = orderItems.reduce((sum, item) => sum + parseFloat(item.total_price || (item.quantity * item.unit_price) || 0), 0);
         const originalTotal = parseFloat(order.actual_cost || order.estimated_cost || calculatedItemsTotal || 0);
-        const finalY = doc.lastAutoTable.finalY + 8;
 
-        doc.setFillColor(254, 242, 242);
-        doc.rect(116, finalY, 80, 24, 'F');
-        doc.setDrawColor(252, 165, 165);
-        doc.rect(116, finalY, 80, 24, 'S');
+        const rows = orderItems.length > 0 ? orderItems.map((item, idx) => `
+            <tr>
+                <td class="text-center">${idx + 1}</td>
+                <td><strong>${item.description || 'N/A'} [VOID]</strong></td>
+                <td class="text-center">${(item.item_type || 'part').toUpperCase()}</td>
+                <td class="text-center">${item.quantity}</td>
+                <td class="text-right" style="color: #64748b; text-decoration: line-through;">Php ${parseFloat(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td class="text-right font-bold" style="color: #dc2626;">Php 0.00</td>
+            </tr>
+        `).join('') : `<tr><td colspan="6" class="text-center">No items recorded on this cancelled invoice.</td></tr>`;
 
-        doc.setFontSize(8.5);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(153, 27, 27);
-        doc.text('ORIGINAL AMOUNT:', 120, finalY + 6);
-        doc.text(`Php ${originalTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 190, finalY + 6, { align: 'right' });
+        const html = `
+            <div class="invoice-header" style="border-bottom: 2px solid #fecaca; background: #fff5f5; padding: 12px; border-radius: 8px;">
+                <div>
+                    <h1 class="brand-title" style="color: #991b1b;">CarShop ERP</h1>
+                    <p class="brand-sub">Car Shop Management & Repair System</p>
+                    <p class="brand-sub">123 Service Road, Auto City | Tel: (02) 8123-4567</p>
+                </div>
+                <div class="doc-meta">
+                    <div class="doc-badge" style="color: #dc2626;">CANCELLED INVOICE</div>
+                    <div style="font-size: 9px; font-weight: bold; color: #b91c1c; margin-bottom: 4px;">[ VOIDED - NO PAYMENT DUE ]</div>
+                    <div class="doc-number"><strong>Invoice #:</strong> ${voidInvNum}</div>
+                    <div class="doc-number"><strong>Date:</strong> ${now}</div>
+                    <div class="doc-number"><strong>JO #:</strong> ${order.order_number}</div>
+                </div>
+            </div>
 
-        doc.text('STATUS:', 120, finalY + 12);
-        doc.setFont('helvetica', 'bold');
-        doc.text('CANCELLED / VOID', 190, finalY + 12, { align: 'right' });
+            <div class="banner-box" style="background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; margin-top: 14px;">
+                <p style="margin: 0; font-weight: bold;">NOTICE OF INVOICE CANCELLATION:</p>
+                <p style="margin: 3px 0 0 0; font-size: 10px;">
+                    ${order.cancellation_reason ? `Reason: ${order.cancellation_reason}` : 'Reason: Order cancelled by authorized user.'}
+                    ${order.cancelled_at ? ` | Cancelled on: ${new Date(order.cancelled_at).toLocaleString()}` : ''}
+                </p>
+            </div>
 
-        doc.setFontSize(10.5);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(220, 38, 38);
-        doc.text('AMOUNT DUE:', 120, finalY + 20);
-        doc.text('Php 0.00', 190, finalY + 20, { align: 'right' });
+            <div class="info-grid">
+                <div class="info-card">
+                    <h4>Customer Details</h4>
+                    <p><strong>Name:</strong> ${order.customer?.full_name || 'Walk-in Customer'}</p>
+                    <p><strong>Contact:</strong> ${order.customer?.contact_number || 'N/A'}</p>
+                    <p><strong>Address:</strong> ${order.customer?.address || 'N/A'}</p>
+                </div>
+                <div class="info-card">
+                    <h4>Vehicle Details</h4>
+                    <p><strong>Plate No:</strong> ${order.vehicle?.plate_number || 'N/A'}</p>
+                    <p><strong>Model:</strong> ${order.vehicle?.brand || ''} ${order.vehicle?.model || ''} (${order.vehicle?.year || 'N/A'})</p>
+                    <p><strong>VIN:</strong> ${order.vehicle?.vin || 'N/A'}</p>
+                </div>
+            </div>
 
-        // Signatures
-        const signY = finalY + 36;
-        doc.setDrawColor(148, 163, 184);
-        doc.line(20, signY, 80, signY);
-        doc.line(120, signY, 180, signY);
+            <table class="items-table">
+                <thead>
+                    <tr style="background: #475569;">
+                        <th style="width: 30px;" class="text-center">#</th>
+                        <th>Item / Service Description</th>
+                        <th style="width: 70px;" class="text-center">Type</th>
+                        <th style="width: 50px;" class="text-center">Qty</th>
+                        <th style="width: 110px;" class="text-right">Original Unit Price</th>
+                        <th style="width: 100px;" class="text-right">Amount Due</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>
 
-        doc.setFontSize(8.5);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(100, 116, 139);
-        doc.text('Authorized Cancellation / Supervisor', 20, signY + 5);
-        doc.text('Customer Notification / Conforme', 120, signY + 5);
+            <div class="totals-box" style="background: #fef2f2; border: 1px solid #fecaca;">
+                <div class="total-line" style="color: #991b1b;">
+                    <span>ORIGINAL AMOUNT:</span>
+                    <span>Php ${originalTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div class="total-line" style="color: #991b1b; font-weight: bold;">
+                    <span>STATUS:</span>
+                    <span>CANCELLED / VOID</span>
+                </div>
+                <div class="total-line grand-total" style="color: #dc2626;">
+                    <span>AMOUNT DUE:</span>
+                    <span>Php 0.00</span>
+                </div>
+            </div>
 
-        // Disclaimer
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'italic');
-        doc.setTextColor(185, 28, 28);
-        doc.text(
-            '* VOID TRANSACTION: This invoice is formally cancelled and invalidated. No liabilities or balances are outstanding.',
-            14,
-            signY + 16
-        );
+            <div class="signatures">
+                <div class="signature-box">Authorized Cancellation / Supervisor</div>
+                <div class="signature-box">Customer Notification / Conforme</div>
+            </div>
 
-        // Footer
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(148, 163, 184);
-        doc.text('CarShop ERP System Generated Void Record', doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
+            <div class="footer-text">
+                * VOID TRANSACTION: This invoice is formally cancelled and invalidated. No liabilities or balances are outstanding.<br>
+                CarShop ERP System Generated Void Record
+            </div>
+        `;
 
-        // Print Only
-        doc.autoPrint();
-        const blobUrl = URL.createObjectURL(doc.output('blob'));
-        window.open(blobUrl, '_blank');
+        printHtmlInvoice(`Cancelled_Invoice_${order.order_number}`, html);
     };
 
     if (loading) return <div className="p-8 text-white text-center">Loading job order...</div>;
