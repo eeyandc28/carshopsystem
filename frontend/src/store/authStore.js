@@ -1,13 +1,56 @@
 import { create } from 'zustand';
 import api from '../services/api';
 
-const getInitialUser = () => {
+const parseJwt = (token) => {
     try {
-        const stored = localStorage.getItem('auth_user');
-        return stored ? JSON.parse(stored) : null;
+        if (!token) return null;
+        const parts = token.split('.');
+        if (parts.length < 2) return null;
+        const base64Url = parts[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+            atob(base64)
+                .split('')
+                .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                .join('')
+        );
+        return JSON.parse(jsonPayload);
     } catch {
         return null;
     }
+};
+
+const getInitialUser = () => {
+    try {
+        const stored = localStorage.getItem('auth_user');
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed && typeof parsed === 'object') return parsed;
+        }
+    } catch {
+        // ignore
+    }
+
+    try {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+            const jwtUser = parseJwt(token);
+            if (jwtUser) {
+                return {
+                    id: jwtUser.id,
+                    name: jwtUser.name,
+                    email: jwtUser.email,
+                    role: jwtUser.role,
+                    roles: jwtUser.roles || [jwtUser.role].filter(Boolean),
+                    permissions: jwtUser.permissions || []
+                };
+            }
+        }
+    } catch {
+        // ignore
+    }
+
+    return null;
 };
 
 const useAuthStore = create((set) => ({
@@ -56,22 +99,27 @@ const useAuthStore = create((set) => ({
     },
 
     fetchUser: async () => {
-        if (!localStorage.getItem('auth_token')) return;
+        const token = localStorage.getItem('auth_token');
+        if (!token) return;
         
         try {
             const response = await api.get('/user');
             const userData = response.data;
             if (userData) {
                 localStorage.setItem('auth_user', JSON.stringify(userData));
+                set({ user: userData, isAuthenticated: true });
             }
-            set({ user: userData, isAuthenticated: true });
         } catch (error) {
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('auth_user');
-            set({ user: null, token: null, isAuthenticated: false });
+            // Only remove auth if 401 Unauthorized
+            if (error.response?.status === 401) {
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('auth_user');
+                set({ user: null, token: null, isAuthenticated: false });
+            }
         }
     },
 }));
 
 export default useAuthStore;
+
 

@@ -54,7 +54,7 @@ app.get('/api/v1/user', auth, async (req, res) => {
             .select('*')
             .eq('id', req.user.id)
             .single();
-        if (error) return res.status(404).json({ message: 'User not found' });
+        if (error || !user) return res.status(404).json({ message: 'User not found' });
 
         const { data: userRoles } = await supabase
             .from('user_roles')
@@ -62,7 +62,19 @@ app.get('/api/v1/user', auth, async (req, res) => {
             .eq('user_id', user.id);
 
         const roles = (userRoles || []).map(ur => ur.role).filter(Boolean);
-        const permissions = await fetchUserPermissions(user.id, user.role);
+        
+        let primaryRole = user.role;
+        if (!primaryRole && roles.length > 0) {
+            primaryRole = roles[0].slug;
+        }
+        if (!primaryRole && user.email) {
+            const prefix = user.email.split('@')[0].toLowerCase();
+            if (['cashier', 'admin', 'mechanic', 'service_advisor', 'inventory_staff'].includes(prefix)) {
+                primaryRole = prefix;
+            }
+        }
+
+        const permissions = await fetchUserPermissions(user.id, primaryRole);
 
         res.json({
             id: user.id,
@@ -71,7 +83,7 @@ app.get('/api/v1/user', auth, async (req, res) => {
             email: user.email,
             contact_number: user.contact_number,
             avatar: user.avatar,
-            role: user.role,
+            role: primaryRole || 'user',
             status: user.status || 'active',
             roles: roles,
             role_names: roles.map(r => r.name),
@@ -83,6 +95,7 @@ app.get('/api/v1/user', auth, async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 });
+
 
 // 404 handler
 app.use((req, res) => {

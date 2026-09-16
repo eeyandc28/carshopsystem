@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
-import usePermission from '../../hooks/usePermission';
+import usePermission, { getUserRoles } from '../../hooks/usePermission';
 import { 
     HomeIcon, 
     UserGroupIcon, 
@@ -20,14 +20,14 @@ import {
 } from '@heroicons/react/24/outline';
 
 const navigation = [
-    { name: 'Dashboard',     href: '/',                      icon: HomeIcon,                 permission: 'dashboard.view', roles: ['admin', 'super_admin', 'service_advisor', 'mechanic', 'cashier', 'inventory_staff', 'general_manager'] },
-    { name: 'Cashier',       href: '/cashier',               icon: BanknotesIcon,            permission: 'payments.view',  roles: ['admin', 'super_admin', 'cashier'], group: 'Payments' },
-    { name: 'Customers',     href: '/customers',             icon: UserGroupIcon,            permission: 'customers.view', roles: ['admin', 'super_admin', 'service_advisor', 'receptionist', 'sales_staff'] },
-    { name: 'Vehicles',      href: '/vehicles',              icon: TruckIcon,                permission: 'vehicles.view',  roles: ['admin', 'super_admin', 'service_advisor', 'receptionist', 'sales_staff'] },
-    { name: 'Job Orders',    href: '/job-orders',            icon: ClipboardDocumentListIcon, permission: 'job_orders.view', roles: ['admin', 'super_admin', 'service_advisor', 'mechanic', 'cashier'] },
-    { name: 'Inventory',     href: '/inventory',             icon: ArchiveBoxIcon,           permission: 'inventory.view', roles: ['admin', 'super_admin', 'service_advisor', 'inventory_staff'] },
-    { name: 'Suppliers',     href: '/suppliers',             icon: TruckIcon,                permission: 'suppliers.view', roles: ['admin', 'super_admin', 'service_advisor', 'inventory_staff'] },
-    { name: 'Deliveries',    href: '/deliveries',            icon: InboxArrowDownIcon,       permission: 'inventory.stock_in', roles: ['admin', 'super_admin', 'service_advisor', 'inventory_staff'], group: 'Purchasing' },
+    { name: 'Dashboard',     href: '/',                      icon: HomeIcon,                 permission: 'dashboard.view', roles: ['admin', 'super_admin', 'service_advisor', 'mechanic', 'cashier', 'inventory_staff', 'general_manager', 'sales_staff', 'accountant', 'receptionist'] },
+    { name: 'Cashier',       href: '/cashier',               icon: BanknotesIcon,            permission: 'payments.view',  roles: ['admin', 'super_admin', 'cashier', 'accountant', 'general_manager'], group: 'Payments' },
+    { name: 'Customers',     href: '/customers',             icon: UserGroupIcon,            permission: 'customers.view', roles: ['admin', 'super_admin', 'service_advisor', 'receptionist', 'sales_staff', 'general_manager'] },
+    { name: 'Vehicles',      href: '/vehicles',              icon: TruckIcon,                permission: 'vehicles.view',  roles: ['admin', 'super_admin', 'service_advisor', 'receptionist', 'sales_staff', 'general_manager'] },
+    { name: 'Job Orders',    href: '/job-orders',            icon: ClipboardDocumentListIcon, permission: 'job_orders.view', roles: ['admin', 'super_admin', 'service_advisor', 'mechanic', 'cashier', 'general_manager'] },
+    { name: 'Inventory',     href: '/inventory',             icon: ArchiveBoxIcon,           permission: 'inventory.view', roles: ['admin', 'super_admin', 'service_advisor', 'inventory_staff', 'general_manager'] },
+    { name: 'Suppliers',     href: '/suppliers',             icon: TruckIcon,                permission: 'suppliers.view', roles: ['admin', 'super_admin', 'service_advisor', 'inventory_staff', 'general_manager'] },
+    { name: 'Deliveries',    href: '/deliveries',            icon: InboxArrowDownIcon,       permission: 'inventory.stock_in', roles: ['admin', 'super_admin', 'service_advisor', 'inventory_staff', 'general_manager'], group: 'Purchasing' },
     { name: 'Sales Report',  href: '/reports/sales',         icon: ChartBarIcon,             permission: 'reports.sales',  roles: ['admin', 'super_admin', 'cashier', 'general_manager', 'accountant'], group: 'Reports' },
     { name: 'Daily Income',  href: '/reports/daily-income',  icon: BanknotesIcon,            permission: 'reports.financial', roles: ['admin', 'super_admin', 'cashier', 'accountant', 'general_manager'], group: 'Reports' },
     { name: 'Item Movement', href: '/reports/item-movement', icon: ArrowTrendingUpIcon,      permission: 'reports.inventory', roles: ['admin', 'super_admin', 'inventory_staff', 'general_manager'], group: 'Reports' },
@@ -41,24 +41,21 @@ const navigation = [
 const Sidebar = ({ onClose }) => {
     const location = useLocation();
     const { logout, user } = useAuthStore();
-    const { hasPermission, isSuperAdmin } = usePermission();
+    const { hasPermission, isSuperAdmin, userRoles } = usePermission();
 
-    const userRolesList = [
-        user?.role?.toLowerCase(),
-        ...(user?.roles || []).map(r => r.slug?.toLowerCase() || r.name?.toLowerCase().replace(/[^a-z0-9]+/g, '_')),
-        ...(user?.role_names || []).map(r => r.toLowerCase().replace(/[^a-z0-9]+/g, '_'))
-    ].filter(Boolean);
+    const activeRoles = userRoles && userRoles.length > 0 ? userRoles : getUserRoles(user);
 
     const filteredNavigation = navigation.filter(item => {
         if (isSuperAdmin) return true;
         if (item.permission && hasPermission(item.permission)) return true;
 
-        if (item.roles && item.roles.some(r => userRolesList.includes(r.toLowerCase()))) {
+        if (item.roles && item.roles.some(r => activeRoles.includes(r.toLowerCase()))) {
             return true;
         }
 
         return false;
     });
+
 
 
     // Group items that share a group label

@@ -1,6 +1,54 @@
 import useAuthStore from '../store/authStore';
 
-const DEFAULT_ROLE_PERMISSIONS = {
+export const getUserRoles = (user) => {
+    if (!user) return [];
+    const roles = new Set();
+
+    // 1. Direct role property
+    if (typeof user.role === 'string' && user.role.trim()) {
+        const clean = user.role.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_');
+        roles.add(clean);
+    } else if (user.role && typeof user.role === 'object') {
+        if (user.role.slug) roles.add(String(user.role.slug).toLowerCase().trim().replace(/[^a-z0-9]+/g, '_'));
+        if (user.role.name) roles.add(String(user.role.name).toLowerCase().trim().replace(/[^a-z0-9]+/g, '_'));
+    }
+
+    // 2. Roles array (can be array of strings or array of objects)
+    if (Array.isArray(user.roles)) {
+        user.roles.forEach(r => {
+            if (typeof r === 'string' && r.trim()) {
+                roles.add(r.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_'));
+            } else if (r && typeof r === 'object') {
+                if (r.slug) roles.add(String(r.slug).toLowerCase().trim().replace(/[^a-z0-9]+/g, '_'));
+                if (r.name) roles.add(String(r.name).toLowerCase().trim().replace(/[^a-z0-9]+/g, '_'));
+            }
+        });
+    }
+
+    // 3. Role names array
+    if (Array.isArray(user.role_names)) {
+        user.role_names.forEach(r => {
+            if (typeof r === 'string' && r.trim()) {
+                roles.add(r.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_'));
+            }
+        });
+    }
+
+    // 4. Fallback from email/username if roles still empty
+    if (roles.size === 0) {
+        const textToScan = `${user.email || ''} ${user.username || ''} ${user.name || ''}`.toLowerCase();
+        if (textToScan.includes('cashier')) roles.add('cashier');
+        if (textToScan.includes('super_admin') || textToScan.includes('superadmin')) roles.add('super_admin');
+        else if (textToScan.includes('admin')) roles.add('admin');
+        if (textToScan.includes('mechanic')) roles.add('mechanic');
+        if (textToScan.includes('inventory')) roles.add('inventory_staff');
+        if (textToScan.includes('advisor')) roles.add('service_advisor');
+    }
+
+    return Array.from(roles).filter(Boolean);
+};
+
+export const DEFAULT_ROLE_PERMISSIONS = {
     super_admin: ['*'],
     admin: ['*'],
     cashier: [
@@ -41,22 +89,23 @@ const DEFAULT_ROLE_PERMISSIONS = {
         'dashboard.view',
         'payments.view', 'invoices.view',
         'reports.sales', 'reports.financial'
+    ],
+    sales_staff: [
+        'dashboard.view',
+        'customers.view', 'customers.create', 'customers.edit',
+        'vehicles.view', 'vehicles.create', 'vehicles.edit',
+        'reports.sales'
     ]
 };
 
 export const usePermission = () => {
     const { user } = useAuthStore();
 
-    const userRoles = [
-        user?.role?.toLowerCase(),
-        ...(user?.roles || []).map(r => r.slug?.toLowerCase() || r.name?.toLowerCase().replace(/[^a-z0-9]+/g, '_')),
-        ...(user?.role_names || []).map(r => r.toLowerCase().replace(/[^a-z0-9]+/g, '_'))
-    ].filter(Boolean);
-
+    const userRoles = getUserRoles(user);
     const isSuperAdmin = userRoles.includes('super_admin') || userRoles.includes('admin');
 
     // Combine database permissions and role fallback permissions
-    const rawPermissions = user?.permissions || [];
+    const rawPermissions = Array.isArray(user?.permissions) ? user.permissions : [];
     let fallbackPerms = [];
     userRoles.forEach(r => {
         if (DEFAULT_ROLE_PERMISSIONS[r]) {
@@ -95,12 +144,13 @@ export const usePermission = () => {
 
     const hasRole = (roleSlug) => {
         if (!user) return false;
-        const target = roleSlug?.toLowerCase();
+        const target = String(roleSlug || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '_');
         return userRoles.includes(target);
     };
 
     return {
         user,
+        userRoles,
         permissions,
         isSuperAdmin,
         hasPermission,
@@ -111,4 +161,5 @@ export const usePermission = () => {
 };
 
 export default usePermission;
+
 

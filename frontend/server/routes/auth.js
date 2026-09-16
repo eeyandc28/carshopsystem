@@ -53,14 +53,25 @@ router.post('/login', async (req, res) => {
             .eq('user_id', user.id);
 
         const roles = (userRoles || []).map(ur => ur.role).filter(Boolean);
-        const permissions = await fetchUserPermissions(user.id, user.role);
+        let primaryRole = user.role;
+        if (!primaryRole && roles.length > 0) {
+            primaryRole = roles[0].slug;
+        }
+        if (!primaryRole && user.email) {
+            const prefix = user.email.split('@')[0].toLowerCase();
+            if (['cashier', 'admin', 'mechanic', 'service_advisor', 'inventory_staff'].includes(prefix)) {
+                primaryRole = prefix;
+            }
+        }
+
+        const permissions = await fetchUserPermissions(user.id, primaryRole);
 
         const token = jwt.sign(
             {
                 id: user.id,
                 email: user.email,
                 name: user.name,
-                role: user.role,
+                role: primaryRole || 'user',
                 roles: roles.map(r => r.slug),
                 permissions
             },
@@ -69,6 +80,7 @@ router.post('/login', async (req, res) => {
         );
 
         const { password: _, ...userWithoutPassword } = user;
+        userWithoutPassword.role = primaryRole || 'user';
         userWithoutPassword.last_login_at = now;
         userWithoutPassword.roles = roles;
         userWithoutPassword.role_names = roles.map(r => r.name);
@@ -130,10 +142,22 @@ router.get('/user', auth, async (req, res) => {
             .eq('user_id', user.id);
 
         const roles = (userRoles || []).map(ur => ur.role).filter(Boolean);
-        const permissions = await fetchUserPermissions(user.id, user.role);
+        let primaryRole = user.role;
+        if (!primaryRole && roles.length > 0) {
+            primaryRole = roles[0].slug;
+        }
+        if (!primaryRole && user.email) {
+            const prefix = user.email.split('@')[0].toLowerCase();
+            if (['cashier', 'admin', 'mechanic', 'service_advisor', 'inventory_staff'].includes(prefix)) {
+                primaryRole = prefix;
+            }
+        }
+
+        const permissions = await fetchUserPermissions(user.id, primaryRole);
 
         res.json({
             ...user,
+            role: primaryRole || 'user',
             roles,
             role_names: roles.map(r => r.name),
             permissions
@@ -142,5 +166,6 @@ router.get('/user', auth, async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 });
+
 
 module.exports = router;
