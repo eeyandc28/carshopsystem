@@ -11,6 +11,10 @@ use App\Http\Controllers\API\V1\JobOrderItemController;
 use App\Http\Controllers\API\V1\ReportController;
 use App\Http\Controllers\API\V1\DeliveryController;
 use App\Http\Controllers\API\V1\PaymentController;
+use App\Http\Controllers\API\V1\RoleController;
+use App\Http\Controllers\API\V1\PermissionController;
+use App\Http\Controllers\API\V1\AuditLogController;
+use App\Http\Controllers\API\V1\UserController;
 
 Route::prefix('v1')->group(function () {
     Route::get('/login', function() { 
@@ -46,6 +50,17 @@ Route::prefix('v1')->group(function () {
         // Deliveries (Receiving)
         Route::apiResource('deliveries', DeliveryController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
 
+        // User Management
+        Route::post('users/{id}/reset-password', [UserController::class, 'resetPassword']);
+        Route::patch('users/{id}/status', [UserController::class, 'updateStatus']);
+        Route::apiResource('users', UserController::class);
+
+        // Role & Permission Management
+        Route::get('permissions', [PermissionController::class, 'index']);
+        Route::apiResource('roles', RoleController::class);
+
+        // Audit Logs
+        Route::get('audit-logs', [AuditLogController::class, 'index']);
     });
 
 });

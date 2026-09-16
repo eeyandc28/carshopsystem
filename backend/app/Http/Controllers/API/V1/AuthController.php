@@ -4,12 +4,46 @@ namespace App\Http\Controllers\API\V1;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use App\Models\Role;
+use App\Models\AuditLog;
 
 class AuthController extends Controller
 {
+    private function formatUserData(User $user): array
+    {
+        $user->load('roles.permissions');
+
+        $perms = [];
+        if ($user->role === 'super_admin' || $user->role === 'admin') {
+            $perms = ['*'];
+        } else {
+            foreach ($user->roles as $r) {
+                foreach ($r->permissions as $p) {
+                    $perms[] = $p->slug;
+                }
+            }
+            $perms = array_values(array_unique($perms));
+        }
+
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'username' => $user->username,
+            'email' => $user->email,
+            'contact_number' => $user->contact_number,
+            'avatar' => $user->avatar,
+            'role' => $user->role,
+            'status' => $user->status ?? 'active',
+            'roles' => $user->roles,
+            'role_names' => $user->roles->pluck('name')->toArray(),
+            'permissions' => $perms,
+            'last_login_at' => $user->last_login_at,
+            'created_at' => $user->created_at,
+        ];
+    }
+
     public function login(Request $request)
     {
         $request->validate([
@@ -17,7 +51,7 @@ class AuthController extends Controller
             'password' => 'required'
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('email', strtolower(trim($request->email)))->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
@@ -25,18 +59,53 @@ class AuthController extends Controller
             ], 401);
         }
 
+        if (($user->status ?? 'active') === 'inactive') {
+            return response()->json([
+                'message' => 'Your account has been deactivated. Please contact the system administrator.'
+            ], 403);
+        }
+
+        // Update last login
+        $user->update(['last_login_at' => now()]);
+
         $token = $user->createToken('auth_token')->plainTextToken;
+
+        AuditLog::create([
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'user_email' => $user->email,
+            'action' => 'login',
+            'module' => 'auth',
+            'record_id' => $user->id,
+            'description' => "User \"{$user->name}\" logged into the system",
+            'ip_address' => $request->ip(),
+            'created_at' => now(),
+        ]);
 
         return response()->json([
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => $user
+            'user' => $this->formatUserData($user)
         ]);
     }
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        if ($request->user()) {
+            AuditLog::create([
+                'user_id' => $request->user()->id,
+                'user_name' => $request->user()->name,
+                'user_email' => $request->user()->email,
+                'action' => 'logout',
+                'module' => 'auth',
+                'record_id' => $request->user()->id,
+                'description' => "User \"{$request->user()->name}\" logged out",
+                'ip_address' => $request->ip(),
+                'created_at' => now(),
+            ]);
+
+            $request->user()->currentAccessToken()->delete();
+        }
 
         return response()->json([
             'message' => 'Logged out successfully'
@@ -45,6 +114,6 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
-        return response()->json($request->user());
+        return response()->json($this->formatUserData($request->user()));
     }
 }
