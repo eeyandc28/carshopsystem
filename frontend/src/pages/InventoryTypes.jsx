@@ -112,10 +112,10 @@ const InventoryTypes = () => {
                         <span className="h-9 w-9 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
                             <TagIcon className="h-5 w-5 text-indigo-400" />
                         </span>
-                        Inventory Types
+                        Item Types
                     </h1>
                     <p className="text-slate-400 text-sm mt-1 ml-12">
-                        Manage grouping types for inventory items.
+                        Manage item types for inventory and services.
                     </p>
                 </div>
                 {!adding && (
