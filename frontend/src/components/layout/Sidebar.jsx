@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
 import usePermission, { getUserRoles } from '../../hooks/usePermission';
@@ -18,9 +19,11 @@ import {
     ClockIcon,
     UserIcon,
     TagIcon,
-    WrenchScrewdriverIcon
+    WrenchScrewdriverIcon,
+    BellIcon
 } from '@heroicons/react/24/outline';
 import PwaInstallPrompt from '../pwa/PwaInstallPrompt';
+import NotificationSettingsModal from '../pwa/NotificationSettingsModal';
 
 const navigation = [
     { name: 'Dashboard',     href: '/',                      icon: HomeIcon,                 permission: 'dashboard.view', roles: ['admin', 'super_admin', 'service_advisor', 'mechanic', 'cashier', 'inventory_staff', 'general_manager', 'sales_staff', 'accountant', 'receptionist'] },
@@ -47,6 +50,7 @@ const Sidebar = ({ onClose }) => {
     const location = useLocation();
     const { logout, user } = useAuthStore();
     const { hasPermission, isSuperAdmin, userRoles } = usePermission();
+    const [notificationModalOpen, setNotificationModalOpen] = useState(false);
 
     const activeRoles = userRoles && userRoles.length > 0 ? userRoles : getUserRoles(user);
     const isCashier = activeRoles.some(r => r.includes('cashier')) || 
@@ -125,6 +129,14 @@ const Sidebar = ({ onClose }) => {
             </div>
 
             <div className="p-4 border-t border-slate-800">
+                <button
+                    type="button"
+                    onClick={() => setNotificationModalOpen(true)}
+                    className="w-full flex items-center px-3 py-2 mb-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
+                >
+                    <BellIcon className="mr-3 h-5 w-5 text-slate-500" />
+                    Push Notifications
+                </button>
                 <PwaInstallPrompt variant="sidebar" />
                 <div className="flex items-center px-2 py-3 mb-2">
                     <div className="h-9 w-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-blue-400 font-bold">
@@ -148,6 +160,11 @@ const Sidebar = ({ onClose }) => {
                     <span className="text-[10px] font-mono text-slate-600 tracking-wider">Carshop v1.0.0</span>
                 </div>
             </div>
+
+            <NotificationSettingsModal
+                isOpen={notificationModalOpen}
+                onClose={() => setNotificationModalOpen(false)}
+            />
         </div>
     );
 };

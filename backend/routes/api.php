@@ -66,9 +66,19 @@ Route::prefix('v1')->group(function () {
         // Audit Logs
         Route::get('audit-logs', [AuditLogController::class, 'index']);
 
-        // Push Notifications (PWA)
+        // Web Push Notifications & Subscriptions
+        Route::get('push/vapid-key', [\App\Http\Controllers\API\V1\PushSubscriptionController::class, 'getVapidKey']);
+        Route::post('push/subscribe', [\App\Http\Controllers\API\V1\PushSubscriptionController::class, 'store']);
+        Route::get('push/status', [\App\Http\Controllers\API\V1\PushSubscriptionController::class, 'status']);
+        Route::delete('push/unsubscribe', [\App\Http\Controllers\API\V1\PushSubscriptionController::class, 'destroy']);
+        Route::post('push/test', [\App\Http\Controllers\API\V1\PushSubscriptionController::class, 'testNotification']);
         Route::post('push-subscriptions', [\App\Http\Controllers\API\V1\PushSubscriptionController::class, 'store']);
         Route::delete('push-subscriptions', [\App\Http\Controllers\API\V1\PushSubscriptionController::class, 'destroy']);
+
+        // In-App Notifications (Notification Bell)
+        Route::get('notifications', [\App\Http\Controllers\API\V1\NotificationController::class, 'index']);
+        Route::patch('notifications/{id}/read', [\App\Http\Controllers\API\V1\NotificationController::class, 'markAsRead']);
+        Route::post('notifications/mark-all-read', [\App\Http\Controllers\API\V1\NotificationController::class, 'markAllAsRead']);
     });
 
 });

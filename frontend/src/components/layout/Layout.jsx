@@ -7,6 +7,8 @@ import PwaUpdatePrompt from '../pwa/PwaUpdatePrompt';
 import PwaInstallPrompt from '../pwa/PwaInstallPrompt';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 
+import NotificationBell from './NotificationBell';
+
 const Layout = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -44,6 +46,8 @@ const Layout = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        {/* Notification Bell (Mobile) */}
+                        <NotificationBell />
                         {/* Compact Install Button in Mobile Header */}
                         <PwaInstallPrompt variant="compact" />
                         <button 
@@ -54,6 +58,19 @@ const Layout = () => {
                         >
                             {sidebarOpen ? <XMarkIcon className="h-6 w-6" /> : <Bars3Icon className="h-6 w-6" />}
                         </button>
+                    </div>
+                </header>
+
+                {/* Desktop Top Bar */}
+                <header className="hidden lg:flex h-16 items-center justify-between px-8 bg-slate-900/60 backdrop-blur-sm border-b border-slate-800 flex-shrink-0">
+                    <div className="flex items-center text-xs text-slate-400">
+                        <span className="h-2 w-2 rounded-full bg-emerald-400 mr-2.5 animate-pulse" />
+                        <span className="font-medium text-slate-300">CarShop ERP Active</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <PwaInstallPrompt variant="compact" />
+                        <NotificationBell />
                     </div>
                 </header>
 
