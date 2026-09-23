@@ -15,6 +15,8 @@ const paymentRoutes = require('../server/routes/payments');
 const roleRoutes = require('../server/routes/roles');
 const permissionRoutes = require('../server/routes/permissions');
 const auditLogRoutes = require('../server/routes/auditLogs');
+const inventoryTypeRoutes = require('../server/routes/inventoryTypes');
+const serviceRoutes = require('../server/routes/services');
 
 const app = express();
 
@@ -34,6 +36,8 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/customers', auth, customerRoutes);
 app.use('/api/v1/vehicles', auth, vehicleRoutes);
 app.use('/api/v1/inventory', auth, inventoryRoutes);
+app.use('/api/v1/inventory-types', auth, inventoryTypeRoutes);
+app.use('/api/v1/services', auth, serviceRoutes);
 app.use('/api/v1/job-orders', auth, jobOrderRoutes);
 app.use('/api/v1/reports', auth, reportRoutes);
 app.use('/api/v1/users', auth, userRoutes);

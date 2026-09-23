@@ -7,6 +7,8 @@ const authRoutes = require('../src/routes/auth');
 const customerRoutes = require('../src/routes/customers');
 const vehicleRoutes = require('../src/routes/vehicles');
 const inventoryRoutes = require('../src/routes/inventory');
+const inventoryTypeRoutes = require('../src/routes/inventoryTypes');
+const serviceRoutes = require('../src/routes/services');
 const jobOrderRoutes = require('../src/routes/jobOrders');
 
 const app = express();
@@ -30,6 +32,8 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/customers', auth, customerRoutes);
 app.use('/api/v1/vehicles', auth, vehicleRoutes);
 app.use('/api/v1/inventory', auth, inventoryRoutes);
+app.use('/api/v1/inventory-types', auth, inventoryTypeRoutes);
+app.use('/api/v1/services', auth, serviceRoutes);
 app.use('/api/v1/job-orders', auth, jobOrderRoutes);
 
 // Also mount /user under auth middleware

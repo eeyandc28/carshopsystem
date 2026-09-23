@@ -3,6 +3,19 @@ const supabase = require('../lib/supabase');
 
 const router = express.Router();
 
+const formatItem = (item) => {
+    if (!item) return item;
+    const cost = parseFloat(item.unit_price) || 0;
+    const markup = parseFloat(item.markup_rate) || 0;
+    const selling_price = markup > 0 ? Math.round(cost * (1 + markup / 100) * 100) / 100 : cost;
+    return {
+        ...item,
+        unit_price: cost,
+        markup_rate: markup,
+        selling_price: item.selling_price !== undefined ? parseFloat(item.selling_price) : selling_price
+    };
+};
+
 // GET /inventory
 router.get('/', async (req, res) => {
     try {
@@ -14,7 +27,7 @@ router.get('/', async (req, res) => {
 
         if (error) throw error;
 
-        res.json({ data });
+        res.json({ data: (data || []).map(formatItem) });
     } catch (err) {
         res.status(500).json({ message: 'Failed to fetch inventory', error: err.message });
     }
@@ -23,7 +36,7 @@ router.get('/', async (req, res) => {
 // POST /inventory
 router.post('/', async (req, res) => {
     try {
-        const { name, part_number, brand, supplier_id, stock_quantity, reorder_level, unit_price } = req.body;
+        const { name, type, keyword, markup_rate, part_number, brand, supplier_id, stock_quantity, reorder_level, unit_price } = req.body;
 
         if (!name || !part_number || !brand || stock_quantity === undefined || unit_price === undefined) {
             return res.status(422).json({ message: 'Missing required fields' });
@@ -32,7 +45,11 @@ router.post('/', async (req, res) => {
         const { data, error } = await supabase
             .from('inventories')
             .insert({
-                name, part_number, brand,
+                name: name.trim(),
+                type: type ? type.trim() : null,
+                keyword: keyword ? keyword.trim() : null,
+                markup_rate: markup_rate !== undefined ? parseFloat(markup_rate) : 0.00,
+                part_number, brand,
                 supplier_id: supplier_id || null,
                 stock_quantity: parseInt(stock_quantity),
                 reorder_level: parseInt(reorder_level) || 5,
@@ -260,7 +277,7 @@ router.get('/:id', async (req, res) => {
 
         if (error) return res.status(404).json({ message: 'Item not found' });
 
-        res.json({ data });
+        res.json({ data: formatItem(data) });
     } catch (err) {
         res.status(500).json({ message: 'Failed to fetch item', error: err.message });
     }
@@ -277,7 +294,7 @@ router.put('/:id', async (req, res) => {
             .single();
 
         const updates = {};
-        const fields = ['name', 'part_number', 'brand', 'supplier_id', 'stock_quantity', 'reorder_level', 'unit_price'];
+        const fields = ['name', 'type', 'keyword', 'markup_rate', 'part_number', 'brand', 'supplier_id', 'stock_quantity', 'reorder_level', 'unit_price'];
 
         fields.forEach(field => {
             if (req.body[field] !== undefined) {
@@ -285,6 +302,10 @@ router.put('/:id', async (req, res) => {
             }
         });
 
+        if (updates.name) updates.name = updates.name.trim();
+        if (updates.type !== undefined) updates.type = updates.type ? updates.type.trim() : null;
+        if (updates.keyword !== undefined) updates.keyword = updates.keyword ? updates.keyword.trim() : null;
+        if (updates.markup_rate !== undefined) updates.markup_rate = parseFloat(updates.markup_rate) || 0.00;
         if (updates.stock_quantity !== undefined) updates.stock_quantity = parseInt(updates.stock_quantity);
         if (updates.reorder_level !== undefined) updates.reorder_level = parseInt(updates.reorder_level);
         if (updates.unit_price !== undefined) updates.unit_price = parseFloat(updates.unit_price);
@@ -315,7 +336,7 @@ router.put('/:id', async (req, res) => {
                 });
         }
 
-        res.json({ data });
+        res.json({ data: formatItem(data) });
     } catch (err) {
         res.status(500).json({ message: 'Failed to update item', error: err.message });
     }
