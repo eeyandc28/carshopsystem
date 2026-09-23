@@ -10,6 +10,7 @@ const inventoryRoutes = require('../src/routes/inventory');
 const inventoryTypeRoutes = require('../src/routes/inventoryTypes');
 const serviceRoutes = require('../src/routes/services');
 const jobOrderRoutes = require('../src/routes/jobOrders');
+const pushSubscriptionRoutes = require('../src/routes/pushSubscriptions');
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use('/api/v1/inventory', auth, inventoryRoutes);
 app.use('/api/v1/inventory-types', auth, inventoryTypeRoutes);
 app.use('/api/v1/services', auth, serviceRoutes);
 app.use('/api/v1/job-orders', auth, jobOrderRoutes);
+app.use('/api/v1/push-subscriptions', auth, pushSubscriptionRoutes);
 
 // Also mount /user under auth middleware
 app.get('/api/v1/user', auth, async (req, res) => {

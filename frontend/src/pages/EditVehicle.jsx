@@ -5,6 +5,7 @@ import * as yup from 'yup';
 import api from '../services/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { TruckIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
+import CameraCaptureInput from '../components/common/CameraCaptureInput';
 
 const schema = yup.object({
     customer_id: yup.string().required('Customer is required'),
@@ -155,6 +156,12 @@ const EditVehicle = () => {
                         <label className="block text-sm font-medium text-slate-300 mb-2">Mileage (KM)</label>
                         <input type="number" {...register('mileage')} className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
                         {errors.mileage && <p className="mt-1 text-xs text-red-400">{errors.mileage.message}</p>}
+                    </div>
+                    <div>
+                        <CameraCaptureInput 
+                            label="Vehicle Photo (Optional)" 
+                            hint="Capture updated vehicle exterior with camera or pick from gallery"
+                        />
                     </div>
                     <div className="pt-6 border-t border-slate-800 flex justify-end space-x-4">
                         <button type="button" onClick={() => navigate(-1)} className="px-6 py-3 bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition-all font-semibold">Cancel</button>

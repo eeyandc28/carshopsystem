@@ -17,6 +17,7 @@ const permissionRoutes = require('../server/routes/permissions');
 const auditLogRoutes = require('../server/routes/auditLogs');
 const inventoryTypeRoutes = require('../server/routes/inventoryTypes');
 const serviceRoutes = require('../server/routes/services');
+const pushSubscriptionRoutes = require('../server/routes/pushSubscriptions');
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/v1/payments', auth, paymentRoutes);
 app.use('/api/v1/roles', auth, roleRoutes);
 app.use('/api/v1/permissions', auth, permissionRoutes);
 app.use('/api/v1/audit-logs', auth, auditLogRoutes);
+app.use('/api/v1/push-subscriptions', auth, pushSubscriptionRoutes);
 
 // GET /api/v1/user
 app.get('/api/v1/user', auth, async (req, res) => {

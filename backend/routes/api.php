@@ -65,6 +65,10 @@ Route::prefix('v1')->group(function () {
 
         // Audit Logs
         Route::get('audit-logs', [AuditLogController::class, 'index']);
+
+        // Push Notifications (PWA)
+        Route::post('push-subscriptions', [\App\Http\Controllers\API\V1\PushSubscriptionController::class, 'store']);
+        Route::delete('push-subscriptions', [\App\Http\Controllers\API\V1\PushSubscriptionController::class, 'destroy']);
     });
 
 });

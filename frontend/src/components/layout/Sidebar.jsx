@@ -20,6 +20,7 @@ import {
     TagIcon,
     WrenchScrewdriverIcon
 } from '@heroicons/react/24/outline';
+import PwaInstallPrompt from '../pwa/PwaInstallPrompt';
 
 const navigation = [
     { name: 'Dashboard',     href: '/',                      icon: HomeIcon,                 permission: 'dashboard.view', roles: ['admin', 'super_admin', 'service_advisor', 'mechanic', 'cashier', 'inventory_staff', 'general_manager', 'sales_staff', 'accountant', 'receptionist'] },
@@ -124,7 +125,8 @@ const Sidebar = ({ onClose }) => {
             </div>
 
             <div className="p-4 border-t border-slate-800">
-                <div className="flex items-center px-2 py-3 mb-4">
+                <PwaInstallPrompt variant="sidebar" />
+                <div className="flex items-center px-2 py-3 mb-2">
                     <div className="h-9 w-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-blue-400 font-bold">
                         {user?.name?.[0]?.toUpperCase() || 'A'}
                     </div>
@@ -142,6 +144,9 @@ const Sidebar = ({ onClose }) => {
                     <ArrowLeftOnRectangleIcon className="mr-3 h-5 w-5" />
                     Sign Out
                 </button>
+                <div className="mt-3 text-center">
+                    <span className="text-[10px] font-mono text-slate-600 tracking-wider">Carshop v1.0.0</span>
+                </div>
             </div>
         </div>
     );
