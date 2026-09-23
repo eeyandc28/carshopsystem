@@ -108,7 +108,7 @@ const Inventory = () => {
                                 <th className="px-6 py-4 font-semibold">Part Details</th>
                                 <th className="px-6 py-4 font-semibold">Brand</th>
                                 <th className="px-6 py-4 font-semibold">Stock</th>
-                                <th className="px-6 py-4 font-semibold">Unit Price</th>
+                                <th className="px-6 py-4 font-semibold">Price</th>
                                 <th className="px-6 py-4 font-semibold">Status</th>
                                 <th className="px-6 py-4 font-semibold text-right">Actions</th>
                             </tr>
@@ -143,7 +143,20 @@ const Inventory = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-sm text-white font-semibold">₱{item.unit_price.toLocaleString()}</span>
+                                            <div>
+                                                <span className="text-sm text-emerald-400 font-semibold block">
+                                                    ₱{(parseFloat(item.selling_price ?? item.unit_price) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </span>
+                                                {parseFloat(item.markup_rate) > 0 ? (
+                                                    <span className="text-xs text-slate-400 block">
+                                                        Cost: ₱{parseFloat(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (+{parseFloat(item.markup_rate)}%)
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs text-slate-500 block">
+                                                        Cost: ₱{parseFloat(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             {item.stock_quantity <= item.reorder_level ? (

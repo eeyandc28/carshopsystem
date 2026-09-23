@@ -38,6 +38,8 @@ import Roles from './pages/Roles';
 import AuditLogs from './pages/AuditLogs';
 import Cashier from './pages/Cashier';
 import DailyIncomeReport from './pages/DailyIncomeReport';
+import InventoryTypes from './pages/InventoryTypes';
+import Services from './pages/Services';
 
 function App() {
     const { fetchUser, isAuthenticated } = useAuthStore();
@@ -68,7 +70,9 @@ function App() {
                         <Route path="/job-orders/:id" element={<JobOrderDetails />} />
                         <Route path="/job-orders/add" element={<AddJobOrder />} />
                         <Route path="/job-orders/edit/:id" element={<EditJobOrder />} />
+                        <Route path="/services" element={<Services />} />
                         <Route path="/inventory" element={<Inventory />} />
+                        <Route path="/inventory-types" element={<InventoryTypes />} />
                         <Route path="/suppliers" element={<Suppliers />} />
                         <Route path="/inventory/add" element={<AddInventory />} />
                         <Route path="/suppliers/add" element={<AddSupplier />} />

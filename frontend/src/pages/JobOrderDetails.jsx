@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -17,7 +17,9 @@ import {
     TrashIcon,
     XMarkIcon,
     PrinterIcon,
-    XCircleIcon
+    XCircleIcon,
+    ChevronUpDownIcon,
+    MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 
 const statusSteps = [
@@ -35,6 +37,8 @@ const JobOrderDetails = () => {
     const [order, setOrder] = useState(null);
     const [orderItems, setOrderItems] = useState([]);
     const [inventory, setInventory] = useState([]);
+    const [itemTypes, setItemTypes] = useState([]);
+    const [servicesList, setServicesList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
@@ -42,17 +46,33 @@ const JobOrderDetails = () => {
     const [cancelReason, setCancelReason] = useState('Customer Request / Decided Not to Proceed');
     const [cancelling, setCancelling] = useState(false);
     const [newItem, setNewItem] = useState({
-        item_type: 'part',
+        item_type: '',
         inventory_id: '',
+        service_id: '',
         description: '',
         quantity: 1,
         unit_price: 0
     });
+    const [descSearch, setDescSearch] = useState('');
+    const [isDescOpen, setIsDescOpen] = useState(false);
+    const descDropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (descDropdownRef.current && !descDropdownRef.current.contains(event.target)) {
+                setIsDescOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     useEffect(() => {
         fetchOrderDetails();
         fetchOrderItems();
         fetchInventory();
+        fetchItemTypes();
+        fetchServices();
     }, [id]);
 
     const fetchOrderDetails = async () => {
@@ -84,19 +104,69 @@ const JobOrderDetails = () => {
         }
     };
 
+    const fetchItemTypes = async () => {
+        try {
+            const res = await api.get('/inventory-types');
+            setItemTypes(res.data.data || []);
+        } catch (error) {
+            console.error('Failed to fetch item types', error);
+        }
+    };
+
+    const fetchServices = async () => {
+        try {
+            const res = await api.get('/services?active_only=true');
+            setServicesList(res.data.data || []);
+        } catch (error) {
+            console.error('Failed to fetch services', error);
+        }
+    };
+
+    const selectItem = (kind, item) => {
+        if (kind === 'inv') {
+            const cost = parseFloat(item.unit_price) || 0;
+            const markup = parseFloat(item.markup_rate) || 0;
+            const sellingPrice = item.selling_price !== undefined && item.selling_price !== null
+                ? parseFloat(item.selling_price)
+                : Number((cost * (1 + markup / 100)).toFixed(2));
+
+            setNewItem(prev => ({
+                ...prev,
+                inventory_id: item.id,
+                service_id: '',
+                description: item.name,
+                unit_price: sellingPrice
+            }));
+            setDescSearch(item.name);
+        } else if (kind === 'srv') {
+            setNewItem(prev => ({
+                ...prev,
+                inventory_id: '',
+                service_id: item.id,
+                description: item.name,
+                unit_price: parseFloat(item.price) || 0
+            }));
+            setDescSearch(item.name);
+        }
+        setIsDescOpen(false);
+    };
+
     const addItem = async (e) => {
-        e.preventDefault();
+        if (e && e.preventDefault) e.preventDefault();
         if (updating || !newItem.description) return;
         setUpdating(true);
         try {
             await api.post(`/job-orders/${id}/items`, newItem);
             setNewItem({
-                item_type: 'part',
+                item_type: '',
                 inventory_id: '',
+                service_id: '',
                 description: '',
                 quantity: 1,
                 unit_price: 0
             });
+            setDescSearch('');
+            setIsDescOpen(false);
             fetchOrderItems();
             fetchOrderDetails();
         } catch (error) {
@@ -909,11 +979,11 @@ const JobOrderDetails = () => {
                             </h3>
                         </div>
 
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto min-h-[340px] pb-40">
                             <table className="w-full text-left">
                                 <thead>
                                     <tr className="text-slate-500 text-xs uppercase tracking-wider border-b border-slate-800 bg-slate-800/20">
-                                        <th className="px-4 py-3 font-semibold w-32">Type</th>
+                                        <th className="px-4 py-3 font-semibold w-36">Type</th>
                                         <th className="px-4 py-3 font-semibold">Description / Part</th>
                                         <th className="px-4 py-3 font-semibold text-center w-24">Qty</th>
                                         <th className="px-4 py-3 font-semibold text-right w-32">Price</th>
@@ -948,40 +1018,236 @@ const JobOrderDetails = () => {
                                             <select
                                                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                                                 value={newItem.item_type}
-                                                onChange={(e) => setNewItem({ ...newItem, item_type: e.target.value, inventory_id: '', description: '', unit_price: 0 })}
+                                                onChange={(e) => {
+                                                    setNewItem({
+                                                        ...newItem,
+                                                        item_type: e.target.value,
+                                                        inventory_id: '',
+                                                        service_id: '',
+                                                        description: '',
+                                                        unit_price: 0
+                                                    });
+                                                    setDescSearch('');
+                                                    setIsDescOpen(false);
+                                                }}
                                             >
-                                                <option value="part">Part</option>
-                                                <option value="labor">Labor</option>
+                                                <option value="">-- Select Type --</option>
+                                                {itemTypes.map(t => (
+                                                    <option key={t.id} value={t.name}>{t.name}</option>
+                                                ))}
                                             </select>
                                         </td>
-                                        <td className="px-4 py-3">
-                                            {newItem.item_type === 'part' ? (
-                                                <select
-                                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                    value={newItem.inventory_id}
-                                                    onChange={(e) => {
-                                                        const item = inventory.find(i => String(i.id) === String(e.target.value));
-                                                        setNewItem({
-                                                            ...newItem,
-                                                            inventory_id: e.target.value,
-                                                            description: item ? item.name : '',
-                                                            unit_price: item ? item.unit_price : 0
-                                                        });
-                                                    }}
-                                                >
-                                                    <option value="">-- Select Inventory --</option>
-                                                    {inventory.map(i => (
-                                                        <option key={i.id} value={i.id}>{i.name} (₱{i.unit_price}) - Stock: {i.stock_quantity}</option>
-                                                    ))}
-                                                </select>
-                                            ) : (
+                                        <td className="px-4 py-3 relative">
+                                            {newItem.item_type ? (() => {
+                                                const filteredInv = inventory.filter(i =>
+                                                    i.type && i.type.toLowerCase() === newItem.item_type.toLowerCase()
+                                                );
+                                                const filteredSrv = servicesList.filter(s =>
+                                                    s.type && s.type.toLowerCase() === newItem.item_type.toLowerCase()
+                                                );
+                                                const hasOptions = filteredInv.length > 0 || filteredSrv.length > 0;
+
+                                                if (!hasOptions) {
+                                                    return (
+                                                        <input
+                                                            type="text"
+                                                            placeholder={`No items or services tagged as "${newItem.item_type}" — type manually`}
+                                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none placeholder-slate-600"
+                                                            value={newItem.description}
+                                                            onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                                                            onKeyDown={(e) => e.key === 'Enter' && addItem(e)}
+                                                        />
+                                                    );
+                                                }
+
+                                                const query = (descSearch || '').trim().toLowerCase();
+
+                                                const searchFilteredSrv = filteredSrv.filter(s => {
+                                                    if (!query) return true;
+                                                    const nameMatch = s.name && s.name.toLowerCase().includes(query);
+                                                    const keyMatch = s.keyword && s.keyword.toLowerCase().includes(query);
+                                                    const codeMatch = s.code && s.code.toLowerCase().includes(query);
+                                                    return nameMatch || keyMatch || codeMatch;
+                                                });
+
+                                                const searchFilteredInv = filteredInv.filter(i => {
+                                                    if (!query) return true;
+                                                    const nameMatch = i.name && i.name.toLowerCase().includes(query);
+                                                    const keyMatch = i.keyword && i.keyword.toLowerCase().includes(query);
+                                                    const partMatch = i.part_number && i.part_number.toLowerCase().includes(query);
+                                                    return nameMatch || keyMatch || partMatch;
+                                                });
+
+                                                const totalResults = searchFilteredSrv.length + searchFilteredInv.length;
+
+                                                return (
+                                                    <div className="relative" ref={descDropdownRef}>
+                                                        <div className="relative flex items-center">
+                                                            <input
+                                                                type="text"
+                                                                className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-3 pr-16 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none placeholder-slate-500"
+                                                                placeholder={`Search ${newItem.item_type} by keyword or description...`}
+                                                                value={descSearch !== '' ? descSearch : (newItem.description || '')}
+                                                                onFocus={() => setIsDescOpen(true)}
+                                                                onClick={() => setIsDescOpen(true)}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    setDescSearch(val);
+                                                                    setNewItem(prev => ({
+                                                                        ...prev,
+                                                                        description: val,
+                                                                        inventory_id: '',
+                                                                        service_id: ''
+                                                                    }));
+                                                                    setIsDescOpen(true);
+                                                                }}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') {
+                                                                        if (isDescOpen && totalResults === 1) {
+                                                                            e.preventDefault();
+                                                                            if (searchFilteredSrv.length === 1) {
+                                                                                selectItem('srv', searchFilteredSrv[0]);
+                                                                            } else {
+                                                                                selectItem('inv', searchFilteredInv[0]);
+                                                                            }
+                                                                        } else if (!isDescOpen && newItem.description) {
+                                                                            addItem(e);
+                                                                        }
+                                                                    } else if (e.key === 'Escape') {
+                                                                        setIsDescOpen(false);
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <div className="absolute right-2 flex items-center gap-1">
+                                                                {(descSearch || newItem.description) && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setDescSearch('');
+                                                                            setNewItem(prev => ({
+                                                                                ...prev,
+                                                                                inventory_id: '',
+                                                                                service_id: '',
+                                                                                description: '',
+                                                                                unit_price: 0
+                                                                            }));
+                                                                            setIsDescOpen(true);
+                                                                        }}
+                                                                        className="p-1 text-slate-500 hover:text-slate-300 transition-colors"
+                                                                        title="Clear"
+                                                                    >
+                                                                        <XMarkIcon className="h-3.5 w-3.5" />
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setIsDescOpen(!isDescOpen)}
+                                                                    className="p-1 text-slate-400 hover:text-white transition-colors"
+                                                                >
+                                                                    <ChevronUpDownIcon className="h-4 w-4" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {isDescOpen && (
+                                                            <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
+                                                                {totalResults === 0 ? (
+                                                                    <div className="p-3 text-xs text-slate-400 text-center">
+                                                                        No items matching &quot;{descSearch}&quot;.
+                                                                        <div className="text-[11px] text-slate-500 mt-1">Press Enter or click Add to use manual text.</div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="py-1 divide-y divide-slate-800">
+                                                                        {searchFilteredSrv.length > 0 && (
+                                                                            <div>
+                                                                                <div className="px-3 py-1.5 bg-slate-800/60 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                                                    Services / Labor Operations
+                                                                                </div>
+                                                                                {searchFilteredSrv.map(s => {
+                                                                                    const isSelected = newItem.service_id && String(newItem.service_id) === String(s.id);
+                                                                                    return (
+                                                                                        <div
+                                                                                            key={`srv_${s.id}`}
+                                                                                            onClick={() => selectItem('srv', s)}
+                                                                                            className={`px-3 py-2 cursor-pointer flex items-center justify-between transition-colors ${
+                                                                                                isSelected ? 'bg-blue-600/20 text-blue-300' : 'hover:bg-slate-800 text-white'
+                                                                                            }`}
+                                                                                        >
+                                                                                            <div className="flex items-center gap-2 overflow-hidden pr-2">
+                                                                                                <span className="text-sm font-medium truncate">{s.name}</span>
+                                                                                                {s.keyword && (
+                                                                                                    <span className="px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[11px] font-mono flex-shrink-0">
+                                                                                                        [{s.keyword}]
+                                                                                                    </span>
+                                                                                                )}
+                                                                                            </div>
+                                                                                            <span className="text-xs font-semibold text-slate-300 flex-shrink-0">
+                                                                                                ₱{parseFloat(s.price).toLocaleString()}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        )}
+
+                                                                        {searchFilteredInv.length > 0 && (
+                                                                            <div>
+                                                                                <div className="px-3 py-1.5 bg-slate-800/60 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                                                    Inventory Items
+                                                                                </div>
+                                                                                {searchFilteredInv.map(i => {
+                                                                                    const isSelected = newItem.inventory_id && String(newItem.inventory_id) === String(i.id);
+                                                                                    const cost = parseFloat(i.unit_price) || 0;
+                                                                                    const markup = parseFloat(i.markup_rate) || 0;
+                                                                                    const sellPrice = i.selling_price !== undefined && i.selling_price !== null
+                                                                                        ? parseFloat(i.selling_price)
+                                                                                        : (cost * (1 + markup / 100));
+                                                                                    return (
+                                                                                        <div
+                                                                                            key={`inv_${i.id}`}
+                                                                                            onClick={() => selectItem('inv', i)}
+                                                                                            className={`px-3 py-2 cursor-pointer flex items-center justify-between transition-colors ${
+                                                                                                isSelected ? 'bg-blue-600/20 text-blue-300' : 'hover:bg-slate-800 text-white'
+                                                                                            }`}
+                                                                                        >
+                                                                                            <div className="flex items-center gap-2 overflow-hidden pr-2">
+                                                                                                <span className="text-sm font-medium truncate">{i.name}</span>
+                                                                                                {i.keyword && (
+                                                                                                    <span className="px-1.5 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-[11px] font-mono flex-shrink-0">
+                                                                                                        [{i.keyword}]
+                                                                                                    </span>
+                                                                                                )}
+                                                                                            </div>
+                                                                                            <div className="text-right flex-shrink-0 ml-2">
+                                                                                                <span className="text-xs font-semibold text-white block">
+                                                                                                    ₱{sellPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                                                </span>
+                                                                                                {markup > 0 && (
+                                                                                                    <span className="text-[10px] text-emerald-400 block font-medium">
+                                                                                                        +{markup}%
+                                                                                                    </span>
+                                                                                                )}
+                                                                                                <span className="text-[10px] text-slate-400 block">
+                                                                                                    Stock: {i.stock_quantity}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })() : (
                                                 <input
                                                     type="text"
-                                                    placeholder="Description (Press Enter to save)"
-                                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                    value={newItem.description}
-                                                    onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-                                                    onKeyDown={(e) => e.key === 'Enter' && addItem(e)}
+                                                    placeholder="Select a type first"
+                                                    disabled
+                                                    className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-slate-600 text-sm outline-none cursor-not-allowed"
                                                 />
                                             )}
                                         </td>
@@ -1006,7 +1272,7 @@ const JobOrderDetails = () => {
                                                     value={newItem.unit_price}
                                                     onChange={(e) => setNewItem({ ...newItem, unit_price: e.target.value })}
                                                     onKeyDown={(e) => e.key === 'Enter' && addItem(e)}
-                                                    disabled={newItem.item_type === 'part'}
+                                                    disabled={!!newItem.inventory_id}
                                                 />
                                             </div>
                                         </td>

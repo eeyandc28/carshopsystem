@@ -15,6 +15,8 @@ use App\Http\Controllers\API\V1\RoleController;
 use App\Http\Controllers\API\V1\PermissionController;
 use App\Http\Controllers\API\V1\AuditLogController;
 use App\Http\Controllers\API\V1\UserController;
+use App\Http\Controllers\API\V1\InventoryTypeController;
+use App\Http\Controllers\API\V1\ServiceController;
 
 Route::prefix('v1')->group(function () {
     Route::get('/login', function() { 
@@ -39,6 +41,8 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('vehicles', VehicleController::class);
         Route::get('inventory/{id}/movements', [InventoryController::class, 'movements']);
         Route::apiResource('inventory', InventoryController::class);
+        Route::apiResource('inventory-types', InventoryTypeController::class)->except(['show']);
+        Route::apiResource('services', ServiceController::class)->except(['show']);
 
         Route::apiResource('job-orders', JobOrderController::class);
         Route::post('job-orders/{jobOrder}/cancel', [JobOrderController::class, 'cancel']);

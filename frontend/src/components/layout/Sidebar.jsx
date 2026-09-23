@@ -16,7 +16,9 @@ import {
     BanknotesIcon,
     ShieldCheckIcon,
     ClockIcon,
-    UserIcon
+    UserIcon,
+    TagIcon,
+    WrenchScrewdriverIcon
 } from '@heroicons/react/24/outline';
 
 const navigation = [
@@ -25,8 +27,10 @@ const navigation = [
     { name: 'Customers',     href: '/customers',             icon: UserGroupIcon,            permission: 'customers.view', roles: ['admin', 'super_admin', 'service_advisor', 'receptionist', 'sales_staff', 'general_manager'] },
     { name: 'Vehicles',      href: '/vehicles',              icon: TruckIcon,                permission: 'vehicles.view',  roles: ['admin', 'super_admin', 'service_advisor', 'receptionist', 'sales_staff', 'general_manager'] },
     { name: 'Job Orders',    href: '/job-orders',            icon: ClipboardDocumentListIcon, permission: 'job_orders.view', roles: ['admin', 'super_admin', 'service_advisor', 'mechanic', 'cashier', 'general_manager'] },
-    { name: 'Inventory',     href: '/inventory',             icon: ArchiveBoxIcon,           permission: 'inventory.view', roles: ['admin', 'super_admin', 'service_advisor', 'inventory_staff', 'general_manager'] },
-    { name: 'Suppliers',     href: '/suppliers',             icon: TruckIcon,                permission: 'suppliers.view', roles: ['admin', 'super_admin', 'service_advisor', 'inventory_staff', 'general_manager'] },
+    { name: 'Services',      href: '/services',              icon: WrenchScrewdriverIcon,     permission: 'job_orders.view', roles: ['admin', 'super_admin', 'service_advisor', 'mechanic', 'cashier', 'general_manager'] },
+    { name: 'Inventory',       href: '/inventory',        icon: ArchiveBoxIcon,           permission: 'inventory.view',     roles: ['admin', 'super_admin', 'service_advisor', 'inventory_staff', 'general_manager'] },
+    { name: 'Item Types',      href: '/inventory-types',  icon: TagIcon,                  permission: 'inventory.view',     roles: ['admin', 'super_admin', 'inventory_staff', 'general_manager'] },
+    { name: 'Suppliers',       href: '/suppliers',        icon: TruckIcon,                permission: 'suppliers.view',     roles: ['admin', 'super_admin', 'service_advisor', 'inventory_staff', 'general_manager'] },
     { name: 'Deliveries',    href: '/deliveries',            icon: InboxArrowDownIcon,       permission: 'inventory.stock_in', roles: ['admin', 'super_admin', 'service_advisor', 'inventory_staff', 'general_manager'], group: 'Purchasing' },
     { name: 'Sales Report',  href: '/reports/sales',         icon: ChartBarIcon,             permission: 'reports.sales',  roles: ['admin', 'super_admin', 'cashier', 'general_manager', 'accountant'], group: 'Reports' },
     { name: 'Daily Income',  href: '/reports/daily-income',  icon: BanknotesIcon,            permission: 'reports.financial', roles: ['admin', 'super_admin', 'cashier', 'accountant', 'general_manager'], group: 'Reports' },

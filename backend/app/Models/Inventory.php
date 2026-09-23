@@ -13,6 +13,8 @@ class Inventory extends Model
 
     protected $fillable = [
         'name',
+        'type',
+        'keyword',
         'part_number',
         'barcode_sku',
         'brand',
@@ -20,7 +22,24 @@ class Inventory extends Model
         'stock_quantity',
         'reorder_level',
         'unit_price',
+        'markup_rate',
     ];
+
+    protected $casts = [
+        'unit_price'  => 'decimal:2',
+        'markup_rate' => 'decimal:2',
+    ];
+
+    protected $appends = [
+        'selling_price',
+    ];
+
+    public function getSellingPriceAttribute()
+    {
+        $cost = (float) ($this->unit_price ?? 0);
+        $markup = (float) ($this->markup_rate ?? 0);
+        return round($cost * (1 + ($markup / 100)), 2);
+    }
 
     public function supplier()
     {

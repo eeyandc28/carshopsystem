@@ -8,28 +8,56 @@ import { ArchiveBoxIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 const schema = yup.object({
     name: yup.string().required('Part name is required'),
+    type: yup.string().nullable(),
+    keyword: yup.string().nullable(),
     part_number: yup.string().required('Part number is required'),
     brand: yup.string().required('Brand is required'),
     supplier_id: yup.string().nullable().transform((v) => v === "" ? null : v),
     stock_quantity: yup.number().typeError('Must be a number').required('Stock quantity is required'),
     reorder_level: yup.number().typeError('Must be a number').required('Reorder level is required'),
     unit_price: yup.number().typeError('Must be a number').required('Unit price is required'),
+    markup_rate: yup.number().typeError('Must be a number').nullable().transform((v, o) => o === '' || isNaN(v) ? 0 : v),
 }).required();
+
+const ITEM_TYPES = [
+    'Part',
+    'Labor',
+    'Oil & Fluids',
+    'Tire & Wheels',
+    'Electrical',
+    'Body & Paint',
+    'Other',
+];
 
 const EditInventory = () => {
     const { id } = useParams();
-    const [loading, setLoading] = useState(false);
-    const [fetching, setFetching] = useState(true);
+    const [loading, setLoading]     = useState(false);
+    const [fetching, setFetching]   = useState(true);
     const [suppliers, setSuppliers] = useState([]);
+    const [itemTypes, setItemTypes] = useState([]);
     const navigate = useNavigate();
     
-    const { register, handleSubmit, reset, formState: { errors } } = useForm({
+    const { register, handleSubmit, reset, watch, formState: { errors } } = useForm({
         resolver: yupResolver(schema)
     });
 
+    const unitPrice = watch('unit_price');
+    const markupRate = watch('markup_rate');
+    const estSellingPrice = (parseFloat(unitPrice) || 0) * (1 + (parseFloat(markupRate) || 0) / 100);
+
     useEffect(() => {
         fetchInitialData();
+        fetchItemTypes();
     }, [id]);
+
+    const fetchItemTypes = async () => {
+        try {
+            const res = await api.get('/inventory-types');
+            setItemTypes(res.data.data || []);
+        } catch {
+            console.error('Failed to fetch inventory types');
+        }
+    };
 
     const fetchInitialData = async () => {
         try {
@@ -92,6 +120,37 @@ const EditInventory = () => {
                         {errors.name && <p className="mt-1 text-xs text-red-400">{errors.name.message}</p>}
                     </div>
 
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Type</label>
+                        <div className="relative">
+                            <select
+                                {...register('type')}
+                                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer"
+                            >
+                                <option value="">Select Type (optional)</option>
+                                {itemTypes.map(t => (
+                                    <option key={t.id} value={t.name}>{t.name}</option>
+                                ))}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center">
+                                <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+                        </div>
+                        {errors.type && <p className="mt-1 text-xs text-red-400">{errors.type.message}</p>}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Keyword</label>
+                        <input
+                            {...register('keyword')}
+                            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                            placeholder="e.g. filter, oil, engine, lubrication"
+                        />
+                        {errors.keyword && <p className="mt-1 text-xs text-red-400">{errors.keyword.message}</p>}
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="block text-sm font-medium text-slate-300 mb-2">Part Number / SKU</label>
@@ -120,19 +179,40 @@ const EditInventory = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">Unit Price (₱)</label>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Unit Price / Cost (₱)</label>
                             <input type="number" step="0.01" {...register('unit_price')} className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="0.00" />
                             {errors.unit_price && <p className="mt-1 text-xs text-red-400">{errors.unit_price.message}</p>}
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">Supplier (Optional)</label>
-                            <select {...register('supplier_id')} className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none transition-all">
-                                <option value="">Select Supplier</option>
-                                {suppliers.map(s => (
-                                    <option key={s.id} value={s.id}>{s.name}</option>
-                                ))}
-                            </select>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Markup Rate (%)</label>
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    {...register('markup_rate')}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all pr-8"
+                                    placeholder="0.00"
+                                />
+                                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-semibold">%</span>
+                            </div>
+                            {errors.markup_rate && <p className="mt-1 text-xs text-red-400">{errors.markup_rate.message}</p>}
+                            {parseFloat(markupRate) > 0 && parseFloat(unitPrice) > 0 && (
+                                <p className="mt-1.5 text-xs text-emerald-400">
+                                    Est. Selling Price: ₱{estSellingPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
+                            )}
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Supplier (Optional)</label>
+                        <select {...register('supplier_id')} className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none transition-all">
+                            <option value="">Select Supplier</option>
+                            {suppliers.map(s => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
+                        </select>
                     </div>
 
                     <div className="pt-6 border-t border-slate-800 flex justify-end space-x-4">

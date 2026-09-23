@@ -21,12 +21,15 @@ class InventoryController extends Controller
     {
         $validated = $request->validate([
             'name'           => 'required|string|max:255',
+            'type'           => 'nullable|string|max:100',
+            'keyword'        => 'nullable|string|max:255',
             'part_number'    => 'required|string|unique:inventories,part_number',
             'brand'          => 'required|string',
             'supplier_id'    => 'nullable|exists:suppliers,id',
             'stock_quantity' => 'required|integer|min:0',
             'reorder_level'  => 'required|integer|min:0',
             'unit_price'     => 'required|numeric|min:0',
+            'markup_rate'    => 'nullable|numeric|min:0',
         ]);
 
         $inventory = Inventory::create($validated);
@@ -43,12 +46,15 @@ class InventoryController extends Controller
     {
         $validated = $request->validate([
             'name'           => 'sometimes|required|string|max:255',
+            'type'           => 'nullable|string|max:100',
+            'keyword'        => 'nullable|string|max:255',
             'part_number'    => 'sometimes|required|string|unique:inventories,part_number,' . $inventory->id,
             'brand'          => 'sometimes|required|string',
             'supplier_id'    => 'nullable|exists:suppliers,id',
             'stock_quantity' => 'sometimes|required|integer|min:0',
             'reorder_level'  => 'sometimes|required|integer|min:0',
             'unit_price'     => 'sometimes|required|numeric|min:0',
+            'markup_rate'    => 'nullable|numeric|min:0',
         ]);
 
         $inventory->update($validated);

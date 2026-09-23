@@ -8,6 +8,7 @@ import {
     ArrowLeftIcon,
     CheckCircleIcon,
 } from '@heroicons/react/24/outline';
+import InventorySearchableSelect from '../components/common/InventorySearchableSelect';
 
 const AddDelivery = () => {
     const navigate = useNavigate();
@@ -202,12 +203,12 @@ const AddDelivery = () => {
                         </button>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto min-h-[300px] pb-36">
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="bg-slate-800/40 text-slate-400 text-xs uppercase tracking-wider">
                                     <th className="px-4 py-3 font-semibold">#</th>
-                                    <th className="px-4 py-3 font-semibold w-64">Inventory Item</th>
+                                    <th className="px-4 py-3 font-semibold w-72">Inventory Item</th>
                                     <th className="px-4 py-3 font-semibold">Part No.</th>
                                     <th className="px-4 py-3 font-semibold w-28">Qty Received</th>
                                     <th className="px-4 py-3 font-semibold w-32">Unit Cost</th>
@@ -222,16 +223,12 @@ const AddDelivery = () => {
                                         <tr key={idx} className="hover:bg-slate-800/20">
                                             <td className="px-4 py-3 text-slate-500 text-sm">{idx + 1}</td>
                                             <td className="px-4 py-3">
-                                                <select
+                                                <InventorySearchableSelect
+                                                    inventories={inventories}
                                                     value={row.inventory_id}
-                                                    onChange={e => updateRow(idx, 'inventory_id', e.target.value)}
-                                                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                >
-                                                    <option value="">— Select item —</option>
-                                                    {inventories.map(inv => (
-                                                        <option key={inv.id} value={inv.id}>{inv.name}</option>
-                                                    ))}
-                                                </select>
+                                                    onChange={val => updateRow(idx, 'inventory_id', val)}
+                                                    error={errors[`items.${idx}.inventory_id`]}
+                                                />
                                                 {errors[`items.${idx}.inventory_id`] && (
                                                     <p className="text-red-400 text-xs mt-1">{errors[`items.${idx}.inventory_id`]}</p>
                                                 )}
