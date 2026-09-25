@@ -285,6 +285,12 @@ const JobOrderDetails = () => {
                         padding-bottom: 12px;
                         margin-bottom: 16px;
                     }
+                    .brand-logo {
+                        max-height: 42px;
+                        width: auto;
+                        object-fit: contain;
+                        margin-bottom: 4px;
+                    }
                     .brand-title {
                         font-size: 20px;
                         font-weight: 800;
@@ -450,9 +456,9 @@ const JobOrderDetails = () => {
         const html = `
             <div class="invoice-header">
                 <div>
-                    <h1 class="brand-title">CarShop ERP</h1>
-                    <p class="brand-sub">Car Shop Management & Repair System</p>
-                    <p class="brand-sub">123 Service Road, Auto City | Tel: (02) 8123-4567</p>
+                    <img src="/logo.png" class="brand-logo" alt="RADI8" />
+                    <h1 class="brand-title">RADI8</h1>
+                    <p class="brand-sub">Precision. Reliability. Service.</p>
                 </div>
                 <div class="doc-meta">
                     <div class="doc-badge" style="color: #0f172a;">INVOICE</div>
@@ -510,7 +516,7 @@ const JobOrderDetails = () => {
 
             <div class="footer-text">
                 Thank you for your business! Please keep this invoice for your warranty records.<br>
-                CarShop ERP System Generated Document
+                RADI8 System Generated Document
             </div>
         `;
 
@@ -537,9 +543,9 @@ const JobOrderDetails = () => {
         const html = `
             <div class="invoice-header">
                 <div>
-                    <h1 class="brand-title">CarShop ERP</h1>
-                    <p class="brand-sub">Car Shop Management & Repair System</p>
-                    <p class="brand-sub">123 Service Road, Auto City | Tel: (02) 8123-4567</p>
+                    <img src="/logo.png" class="brand-logo" alt="RADI8" />
+                    <h1 class="brand-title">RADI8</h1>
+                    <p class="brand-sub">Precision. Reliability. Service.</p>
                 </div>
                 <div class="doc-meta">
                     <div class="doc-badge" style="color: #d97706;">TEMPORARY INVOICE</div>
@@ -599,7 +605,7 @@ const JobOrderDetails = () => {
 
             <div class="footer-text">
                 * NOTICE: This is a Temporary Invoice for estimation and billing review. Amounts may vary upon final vehicle release. Not an official receipt.<br>
-                CarShop ERP System Generated Document
+                RADI8 System Generated Document
             </div>
         `;
 
@@ -625,9 +631,9 @@ const JobOrderDetails = () => {
         const html = `
             <div class="invoice-header">
                 <div>
-                    <h1 class="brand-title">CarShop ERP</h1>
-                    <p class="brand-sub">Car Shop Management & Repair System</p>
-                    <p class="brand-sub">123 Service Road, Auto City | Tel: (02) 8123-4567</p>
+                    <img src="/logo.png" class="brand-logo" alt="RADI8" />
+                    <h1 class="brand-title">RADI8</h1>
+                    <p class="brand-sub">Precision. Reliability. Service.</p>
                 </div>
                 <div class="doc-meta">
                     <div class="doc-badge" style="color: #2563eb;">SERVICE INVOICE</div>
@@ -687,7 +693,7 @@ const JobOrderDetails = () => {
 
             <div class="footer-text">
                 * NOTE: This Service Invoice is an official technical record of services rendered and parts installed. No monetary amounts are stated.<br>
-                CarShop ERP System Generated Document
+                RADI8 System Generated Document
             </div>
         `;
 
@@ -714,9 +720,9 @@ const JobOrderDetails = () => {
         const html = `
             <div class="invoice-header" style="border-bottom: 2px solid #fecaca; background: #fff5f5; padding: 12px; border-radius: 8px;">
                 <div>
-                    <h1 class="brand-title" style="color: #991b1b;">CarShop ERP</h1>
-                    <p class="brand-sub">Car Shop Management & Repair System</p>
-                    <p class="brand-sub">123 Service Road, Auto City | Tel: (02) 8123-4567</p>
+                    <img src="/logo.png" class="brand-logo" alt="RADI8" />
+                    <h1 class="brand-title" style="color: #991b1b;">RADI8</h1>
+                    <p class="brand-sub">Precision. Reliability. Service.</p>
                 </div>
                 <div class="doc-meta">
                     <div class="doc-badge" style="color: #dc2626;">CANCELLED INVOICE</div>
@@ -788,7 +794,7 @@ const JobOrderDetails = () => {
 
             <div class="footer-text">
                 * VOID TRANSACTION: This invoice is formally cancelled and invalidated. No liabilities or balances are outstanding.<br>
-                CarShop ERP System Generated Void Record
+                RADI8 System Generated Void Record
             </div>
         `;
 

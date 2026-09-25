@@ -31,7 +31,7 @@ const PwaInstallPrompt = ({ variant = 'button' }) => {
                             <ArrowDownTrayIcon className="h-4 w-4" />
                         </div>
                         <div>
-                            <p className="text-xs font-bold text-white">Install Carshop</p>
+                            <p className="text-xs font-bold text-white">Install RADI8</p>
                             <p className="text-[10px] text-slate-400">Fast native app experience</p>
                         </div>
                     </div>
@@ -48,7 +48,7 @@ const PwaInstallPrompt = ({ variant = 'button' }) => {
                     type="button"
                     onClick={handleClick}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 rounded-lg text-xs font-medium transition-all"
-                    title="Install Carshop PWA"
+                    title="Install RADI8 PWA"
                 >
                     <ArrowDownTrayIcon className="h-3.5 w-3.5" />
                     <span>Install App</span>
@@ -61,12 +61,8 @@ const PwaInstallPrompt = ({ variant = 'button' }) => {
                     <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-5 text-white shadow-2xl animate-in fade-in slide-in-from-bottom duration-200">
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
-                                <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
-                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                    </svg>
-                                </div>
-                                <h3 className="font-bold text-sm">Install on iPhone / iPad</h3>
+                                <img src="/logo.png" alt="RADI8" className="h-8 w-auto rounded-lg object-contain" />
+                                <h3 className="font-bold text-sm">Install RADI8 on iPhone / iPad</h3>
                             </div>
                             <button
                                 onClick={() => setShowIosModal(false)}
@@ -77,7 +73,7 @@ const PwaInstallPrompt = ({ variant = 'button' }) => {
                         </div>
 
                         <p className="text-xs text-slate-300 mb-4">
-                            Install Carshop to your Home Screen for full screen and quick access:
+                            Install RADI8 to your Home Screen for full screen and quick access:
                         </p>
 
                         <ol className="space-y-3 text-xs text-slate-300">

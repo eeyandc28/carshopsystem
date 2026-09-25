@@ -26,17 +26,17 @@ const Login = () => {
     return (
         <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
             <div className="max-w-md w-full space-y-8 bg-slate-900 p-10 rounded-2xl border border-slate-800 shadow-2xl">
-                <div>
-                    <div className="mx-auto h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-                        <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                    </div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
-                        CarShop ERP
+                <div className="text-center">
+                    <img 
+                        src="/logo.png" 
+                        alt="RADI8 - Precision. Reliability. Service." 
+                        className="mx-auto h-20 w-auto rounded-xl shadow-lg border border-slate-700/60 object-contain"
+                    />
+                    <h2 className="mt-5 text-center text-2xl font-black tracking-tight text-white">
+                        RADI8 System
                     </h2>
-                    <p className="mt-2 text-center text-sm text-slate-400">
-                        Management & History Monitoring System
+                    <p className="mt-1 text-center text-xs tracking-wider text-slate-400 font-medium uppercase">
+                        Precision &bull; Reliability &bull; Service
                     </p>
                 </div>
                 

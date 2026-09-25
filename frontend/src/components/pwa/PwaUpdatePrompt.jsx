@@ -27,7 +27,7 @@ const PwaUpdatePrompt = () => {
                 <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-bold text-white">New Version Available</h4>
                     <p className="text-xs text-slate-400 mt-0.5">
-                        An update for Carshop is ready. Update now to load the latest features.
+                        An update for RADI8 is ready. Update now to load the latest features.
                     </p>
                     <div className="flex items-center gap-2 mt-3">
                         <button

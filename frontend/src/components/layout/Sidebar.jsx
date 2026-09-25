@@ -84,14 +84,17 @@ const Sidebar = ({ onClose }) => {
 
     return (
         <div className="flex flex-col h-full bg-slate-900 border-r border-slate-800">
-            <div className="flex items-center justify-between h-16 px-6 border-b border-slate-800">
+            <div className="flex items-center justify-between h-16 px-4 border-b border-slate-800">
                 <div className="flex items-center">
-                    <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
-                        <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
+                    <img 
+                        src="/logo.png" 
+                        alt="RADI8" 
+                        className="h-9 w-auto rounded-lg object-contain shadow-md border border-slate-700/50" 
+                    />
+                    <div className="ml-2.5">
+                        <span className="text-base font-black text-white tracking-tight block leading-none">RADI8</span>
+                        <span className="text-[9px] font-semibold text-red-500 uppercase tracking-wider block mt-0.5">Precision Auto</span>
                     </div>
-                    <span className="ml-3 text-lg font-bold text-white tracking-tight">CarShop ERP</span>
                 </div>
                 <button onClick={onClose} className="lg:hidden text-slate-500 hover:text-white">
                     <XMarkIcon className="h-6 w-6" />
@@ -157,7 +160,7 @@ const Sidebar = ({ onClose }) => {
                     Sign Out
                 </button>
                 <div className="mt-3 text-center">
-                    <span className="text-[10px] font-mono text-slate-600 tracking-wider">Carshop v1.0.0</span>
+                    <span className="text-[10px] font-mono text-slate-500 tracking-wider">RADI8 v1.0.0</span>
                 </div>
             </div>
 

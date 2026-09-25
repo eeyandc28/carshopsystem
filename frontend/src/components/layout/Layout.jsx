@@ -37,12 +37,12 @@ const Layout = () => {
                 {/* Mobile Header */}
                 <header className="lg:hidden h-16 flex items-center justify-between px-4 sm:px-6 bg-slate-900 border-b border-slate-800 flex-shrink-0">
                     <div className="flex items-center">
-                        <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-md shadow-blue-500/20">
-                            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                        </div>
-                        <span className="ml-3 font-bold text-white tracking-tight">CarShop</span>
+                        <img 
+                            src="/logo.png" 
+                            alt="RADI8" 
+                            className="h-8 w-auto rounded-lg object-contain shadow-sm border border-slate-700/50" 
+                        />
+                        <span className="ml-2.5 font-black text-white tracking-tight">RADI8</span>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -65,7 +65,7 @@ const Layout = () => {
                 <header className="hidden lg:flex h-16 items-center justify-between px-8 bg-slate-900/60 backdrop-blur-sm border-b border-slate-800 flex-shrink-0">
                     <div className="flex items-center text-xs text-slate-400">
                         <span className="h-2 w-2 rounded-full bg-emerald-400 mr-2.5 animate-pulse" />
-                        <span className="font-medium text-slate-300">CarShop ERP Active</span>
+                        <span className="font-semibold text-slate-300">RADI8 System Active</span>
                     </div>
 
                     <div className="flex items-center gap-3">
