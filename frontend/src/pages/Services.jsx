@@ -66,7 +66,7 @@ const Services = () => {
 
     const fetchInventory = async () => {
         try {
-            const res = await api.get('/inventory');
+            const res = await api.get('/inventory?per_page=500');
             setInventoryItems(res.data.data || []);
         } catch {
             console.error('Failed to load inventory');
@@ -83,6 +83,44 @@ const Services = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Dynamically list all types from Item Types master list + inventory types + standard types
+    const allInclusionTypes = [
+        ...new Set([
+            ...itemTypes.map((t) => t.name).filter(Boolean),
+            ...inventoryItems.map((i) => i.type).filter(Boolean),
+            'Products',
+            'Parts',
+            'Tires',
+            'Wheels',
+            'Oils & Fluids',
+            'Charge / Fee'
+        ])
+    ];
+
+    // Helper to get inventory items tagged with a specific category
+    const getCategoryMatchingItems = (category) => {
+        if (!category) return [];
+        const cat = category.trim().toLowerCase();
+
+        return inventoryItems.filter((item) => {
+            const itemType = (item.type || '').trim().toLowerCase();
+            if (!itemType) return false;
+
+            // Direct match (case-insensitive)
+            if (itemType === cat) return true;
+
+            // Singular vs Plural match (e.g. "product" vs "products", "part" vs "parts", "tire" vs "tires", "wheel" vs "wheels")
+            const singularItem = itemType.endsWith('s') ? itemType.slice(0, -1) : itemType;
+            const singularCat = cat.endsWith('s') ? cat.slice(0, -1) : cat;
+            if (singularItem === singularCat) return true;
+
+            // Contains check (e.g. "oil" in "oils & fluids")
+            if (cat.includes(singularItem) || itemType.includes(singularCat)) return true;
+
+            return false;
+        });
     };
 
     const openCreateModal = () => {
@@ -106,6 +144,25 @@ const Services = () => {
             }
         }
 
+        // Hydrate inclusions: match with inventory if exists
+        const hydratedInclusions = parsedInclusions.map((inc) => {
+            const matches = getCategoryMatchingItems(inc.item_type || '');
+            let matchedItem = null;
+            if (inc.inventory_id) {
+                matchedItem = inventoryItems.find((i) => String(i.id) === String(inc.inventory_id));
+            } else if (inc.name) {
+                matchedItem = matches.find(
+                    (i) => i.name?.toLowerCase() === inc.name?.toLowerCase()
+                );
+            }
+
+            return {
+                ...inc,
+                inventory_id: matchedItem ? matchedItem.id : (inc.inventory_id || null),
+                is_custom: !matchedItem && matches.length > 0 ? true : (matches.length === 0),
+            };
+        });
+
         setFormData({
             name: service.name || '',
             code: service.code || '',
@@ -113,7 +170,7 @@ const Services = () => {
             keyword: service.keyword || '',
             price: service.price ?? '',
             description: service.description || '',
-            inclusions: parsedInclusions,
+            inclusions: hydratedInclusions,
             is_active: Boolean(service.is_active),
         });
         setSelectedInventoryId('');
@@ -145,21 +202,14 @@ const Services = () => {
                 ? parseFloat(inv.selling_price)
                 : Number((cost * (1 + markup / 100)).toFixed(2));
 
-        // Determine inclusion category based on inventory type
-        let inclusionType = 'part';
-        const typeLower = (inv.type || '').toLowerCase();
-        if (typeLower.includes('tire')) inclusionType = 'tire';
-        else if (typeLower.includes('wheel') || typeLower.includes('rim')) inclusionType = 'wheel';
-        else if (typeLower.includes('oil') || typeLower.includes('fluid') || typeLower.includes('lube'))
-            inclusionType = 'material';
-
         const newInc = {
             id: Date.now() + Math.random(),
-            item_type: inclusionType,
+            item_type: inv.type || 'Products',
             inventory_id: inv.id,
             name: inv.name,
             quantity: 1,
-            unit_price: sellingPrice || 0,
+            unit_price: sellingPrice || cost || 0,
+            is_custom: false,
         };
 
         setFormData((prev) => ({
@@ -170,7 +220,8 @@ const Services = () => {
         setSelectedInventoryId('');
     };
 
-    const handleAddCustomInclusion = (type = 'part', defaultName = '') => {
+    const handleAddCustomInclusion = (type = 'Products', defaultName = '') => {
+        const matches = getCategoryMatchingItems(type);
         const newInc = {
             id: Date.now() + Math.random(),
             item_type: type,
@@ -178,12 +229,116 @@ const Services = () => {
             name: defaultName,
             quantity: 1,
             unit_price: 0,
+            is_custom: matches.length === 0,
         };
 
         setFormData((prev) => ({
             ...prev,
             inclusions: [...prev.inclusions, newInc],
         }));
+    };
+
+    // When category changes on an inclusion row
+    const handleCategoryChange = (index, newCategory) => {
+        const matches = getCategoryMatchingItems(newCategory);
+        setFormData((prev) => {
+            const next = [...prev.inclusions];
+            const current = next[index] || {};
+
+            // Check if current item still belongs to this new category
+            const currentItemStillMatches = matches.some((item) => String(item.id) === String(current.inventory_id));
+
+            if (currentItemStillMatches) {
+                next[index] = {
+                    ...current,
+                    item_type: newCategory,
+                };
+            } else if (matches.length > 0) {
+                // Category has matching inventory items - reset to prompt selection
+                next[index] = {
+                    ...current,
+                    item_type: newCategory,
+                    inventory_id: '',
+                    name: '',
+                    unit_price: 0,
+                    is_custom: false,
+                };
+            } else {
+                // No inventory items for this category (e.g. Charge / Fee) -> switch to manual text input
+                next[index] = {
+                    ...current,
+                    item_type: newCategory,
+                    inventory_id: null,
+                    is_custom: true,
+                };
+            }
+            return { ...prev, inclusions: next };
+        });
+    };
+
+    // When an inventory item is selected from the category's loaded items
+    const handleSelectInclusionItem = (index, inventoryId, matchingItems) => {
+        if (inventoryId === '__custom__') {
+            setFormData((prev) => {
+                const next = [...prev.inclusions];
+                next[index] = {
+                    ...next[index],
+                    inventory_id: null,
+                    is_custom: true,
+                };
+                return { ...prev, inclusions: next };
+            });
+            return;
+        }
+
+        const selectedItem = (matchingItems || inventoryItems).find(
+            (item) => String(item.id) === String(inventoryId)
+        );
+
+        if (!selectedItem) {
+            setFormData((prev) => {
+                const next = [...prev.inclusions];
+                next[index] = {
+                    ...next[index],
+                    inventory_id: '',
+                    name: '',
+                    unit_price: 0,
+                };
+                return { ...prev, inclusions: next };
+            });
+            return;
+        }
+
+        const cost = parseFloat(selectedItem.unit_price) || 0;
+        const markup = parseFloat(selectedItem.markup_rate) || 0;
+        const sellingPrice =
+            selectedItem.selling_price !== undefined && selectedItem.selling_price !== null
+                ? parseFloat(selectedItem.selling_price)
+                : Number((cost * (1 + markup / 100)).toFixed(2));
+
+        setFormData((prev) => {
+            const next = [...prev.inclusions];
+            next[index] = {
+                ...next[index],
+                inventory_id: selectedItem.id,
+                name: selectedItem.name,
+                unit_price: sellingPrice || cost || 0,
+                is_custom: false,
+            };
+            return { ...prev, inclusions: next };
+        });
+    };
+
+    // Toggle between loaded dropdown vs manual custom name entry
+    const handleToggleCustomInclusion = (index, isCustom) => {
+        setFormData((prev) => {
+            const next = [...prev.inclusions];
+            next[index] = {
+                ...next[index],
+                is_custom: isCustom,
+            };
+            return { ...prev, inclusions: next };
+        });
     };
 
     const handleUpdateInclusion = (index, field, value) => {
@@ -234,15 +389,17 @@ const Services = () => {
         setSaving(true);
         setError('');
 
-        const cleanedInclusions = (formData.inclusions || []).map((inc) => ({
-            id: inc.id || Date.now(),
-            item_type: inc.item_type || 'part',
-            inventory_id: inc.inventory_id || null,
-            name: (inc.name || '').trim(),
-            quantity: parseFloat(inc.quantity) || 1,
-            unit_price: parseFloat(inc.unit_price) || 0,
-            total_price: Number(((parseFloat(inc.quantity) || 1) * (parseFloat(inc.unit_price) || 0)).toFixed(2)),
-        }));
+        const cleanedInclusions = (formData.inclusions || [])
+            .filter((inc) => (inc.name || '').trim())
+            .map((inc) => ({
+                id: inc.id || Date.now(),
+                item_type: inc.item_type || 'Products',
+                inventory_id: inc.inventory_id || null,
+                name: (inc.name || '').trim(),
+                quantity: parseFloat(inc.quantity) || 1,
+                unit_price: parseFloat(inc.unit_price) || 0,
+                total_price: Number(((parseFloat(inc.quantity) || 1) * (parseFloat(inc.unit_price) || 0)).toFixed(2)),
+            }));
 
         const payload = {
             name: formData.name.trim(),
@@ -293,18 +450,6 @@ const Services = () => {
             return sum + qty * price;
         }, 0);
     };
-
-    // Dynamically list all types from Item Types master list + standard types
-    const allInclusionTypes = [
-        ...new Set([
-            ...itemTypes.map((t) => t.name).filter(Boolean),
-            'Parts',
-            'Tires',
-            'Wheels',
-            'Oils & Fluids',
-            'Charge / Fee'
-        ])
-    ];
 
     const getTypeBtnStyle = (typeName = '') => {
         const t = (typeName || '').toLowerCase();
@@ -921,71 +1066,116 @@ const Services = () => {
                                             <span className="col-span-1 text-center"></span>
                                         </div>
 
-                                        {formData.inclusions.map((inc, idx) => (
-                                            <div key={inc.id || idx} className="grid grid-cols-12 gap-2 items-center px-3 py-2 bg-slate-950/60 text-xs">
-                                                {/* Category Selector */}
-                                                <div className="col-span-3">
-                                                    <select
-                                                        value={inc.item_type || 'Parts'}
-                                                        onChange={(e) => handleUpdateInclusion(idx, 'item_type', e.target.value)}
-                                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg text-slate-200 text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                    >
-                                                        {allInclusionTypes.map((t) => (
-                                                            <option key={t} value={t}>
-                                                                {t}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
+                                        {formData.inclusions.map((inc, idx) => {
+                                            const matches = getCategoryMatchingItems(inc.item_type || '');
+                                            const hasMatches = matches.length > 0;
 
-                                                {/* Item / Charge Name */}
-                                                <div className="col-span-4">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Item or fee name..."
-                                                        value={inc.name}
-                                                        onChange={(e) => handleUpdateInclusion(idx, 'name', e.target.value)}
-                                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg text-white text-xs px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                    />
-                                                </div>
+                                            return (
+                                                <div key={inc.id || idx} className="grid grid-cols-12 gap-2 items-center px-3 py-2 bg-slate-950/60 text-xs">
+                                                    {/* Category Selector */}
+                                                    <div className="col-span-3">
+                                                        <select
+                                                            value={inc.item_type || (allInclusionTypes[0] || 'Products')}
+                                                            onChange={(e) => handleCategoryChange(idx, e.target.value)}
+                                                            className="w-full bg-slate-800 border border-slate-700 rounded-lg text-slate-200 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium cursor-pointer"
+                                                        >
+                                                            {allInclusionTypes.map((t) => (
+                                                                <option key={t} value={t}>
+                                                                    {t}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
 
-                                                {/* Quantity */}
-                                                <div className="col-span-2">
-                                                    <input
-                                                        type="number"
-                                                        min="0.01"
-                                                        step="any"
-                                                        value={inc.quantity}
-                                                        onChange={(e) => handleUpdateInclusion(idx, 'quantity', e.target.value)}
-                                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg text-white text-xs text-center px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                    />
-                                                </div>
+                                                    {/* Item / Charge Name */}
+                                                    <div className="col-span-4">
+                                                        {hasMatches && !inc.is_custom ? (
+                                                            <div className="flex items-center gap-1">
+                                                                <select
+                                                                    value={inc.inventory_id || ''}
+                                                                    onChange={(e) => handleSelectInclusionItem(idx, e.target.value, matches)}
+                                                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg text-white text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 truncate cursor-pointer"
+                                                                >
+                                                                    <option value="">
+                                                                        -- Select {inc.item_type || 'Item'} ({matches.length}) --
+                                                                    </option>
+                                                                    {matches.map((item) => (
+                                                                        <option key={item.id} value={item.id}>
+                                                                            {item.name} — ₱{Number(item.selling_price || item.unit_price || 0).toLocaleString()} {item.stock_quantity !== undefined ? `(Stock: ${item.stock_quantity})` : ''}
+                                                                        </option>
+                                                                    ))}
+                                                                    <option value="__custom__">✏️ Custom / Manual item name...</option>
+                                                                </select>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleToggleCustomInclusion(idx, true)}
+                                                                    title="Type custom name manually"
+                                                                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 shrink-0 cursor-pointer"
+                                                                >
+                                                                    <PencilSquareIcon className="h-3.5 w-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-1">
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder={hasMatches ? `Custom ${inc.item_type} name...` : "Item or fee name..."}
+                                                                    value={inc.name || ''}
+                                                                    onChange={(e) => handleUpdateInclusion(idx, 'name', e.target.value)}
+                                                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg text-white text-xs px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                />
+                                                                {hasMatches && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleToggleCustomInclusion(idx, false)}
+                                                                        title={`Select from tagged ${inc.item_type} list`}
+                                                                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 shrink-0 cursor-pointer"
+                                                                    >
+                                                                        <ListBulletIcon className="h-3.5 w-3.5" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
 
-                                                {/* Unit Price */}
-                                                <div className="col-span-2">
-                                                    <input
-                                                        type="number"
-                                                        min="0"
-                                                        step="0.01"
-                                                        value={inc.unit_price}
-                                                        onChange={(e) => handleUpdateInclusion(idx, 'unit_price', e.target.value)}
-                                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg text-white text-xs text-right px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                    />
-                                                </div>
+                                                    {/* Quantity */}
+                                                    <div className="col-span-2">
+                                                        <input
+                                                            type="number"
+                                                            min="0.01"
+                                                            step="any"
+                                                            value={inc.quantity}
+                                                            onChange={(e) => handleUpdateInclusion(idx, 'quantity', e.target.value)}
+                                                            className="w-full bg-slate-800 border border-slate-700 rounded-lg text-white text-xs text-center px-1.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+                                                        />
+                                                    </div>
 
-                                                {/* Remove */}
-                                                <div className="col-span-1 text-center">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRemoveInclusion(idx)}
-                                                        className="text-slate-500 hover:text-red-400 p-1 transition-colors cursor-pointer"
-                                                        title="Remove inclusion"
-                                                    >
-                                                        <TrashIcon className="h-4 w-4" />
-                                                    </button>
+                                                    {/* Unit Price */}
+                                                    <div className="col-span-2">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            value={inc.unit_price}
+                                                            onChange={(e) => handleUpdateInclusion(idx, 'unit_price', e.target.value)}
+                                                            className="w-full bg-slate-800 border border-slate-700 rounded-lg text-white text-xs text-right px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+                                                        />
+                                                    </div>
+
+                                                    {/* Remove */}
+                                                    <div className="col-span-1 text-center">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRemoveInclusion(idx)}
+                                                            className="text-slate-500 hover:text-red-400 p-1 transition-colors cursor-pointer"
+                                                            title="Remove inclusion"
+                                                        >
+                                                            <TrashIcon className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
 
