@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import {
     WrenchScrewdriverIcon,
@@ -34,8 +34,10 @@ const Services = () => {
     // Modal state for viewing inclusions breakdown
     const [viewingInclusionsService, setViewingInclusionsService] = useState(null);
 
-    // Selected inventory item dropdown helper
-    const [selectedInventoryId, setSelectedInventoryId] = useState('');
+    // Searchable inventory quick-picker state
+    const [quickSearchTerm, setQuickSearchTerm] = useState('');
+    const [isQuickSearchOpen, setIsQuickSearchOpen] = useState(false);
+    const quickSearchRef = useRef(null);
 
     const initialFormData = {
         name: '',
@@ -53,6 +55,16 @@ const Services = () => {
         fetchServices();
         fetchItemTypes();
         fetchInventory();
+    }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (quickSearchRef.current && !quickSearchRef.current.contains(e.target)) {
+                setIsQuickSearchOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     const fetchItemTypes = async () => {
@@ -126,7 +138,8 @@ const Services = () => {
     const openCreateModal = () => {
         setEditingService(null);
         setFormData(initialFormData);
-        setSelectedInventoryId('');
+        setQuickSearchTerm('');
+        setIsQuickSearchOpen(false);
         setError('');
         setIsModalOpen(true);
     };
@@ -173,7 +186,8 @@ const Services = () => {
             inclusions: hydratedInclusions,
             is_active: Boolean(service.is_active),
         });
-        setSelectedInventoryId('');
+        setQuickSearchTerm('');
+        setIsQuickSearchOpen(false);
         setError('');
         setIsModalOpen(true);
     };
@@ -182,17 +196,33 @@ const Services = () => {
         setIsModalOpen(false);
         setEditingService(null);
         setFormData(initialFormData);
-        setSelectedInventoryId('');
+        setQuickSearchTerm('');
+        setIsQuickSearchOpen(false);
         setError('');
     };
 
-    // Inclusions management helpers
-    const handleAddInventoryInclusion = (e) => {
-        const invId = e.target.value;
-        setSelectedInventoryId(invId);
-        if (!invId) return;
+    // Filtered inventory items for quick-add search bar (by keyword, description, name, part #, brand, type)
+    const filteredQuickSearchItems = inventoryItems.filter((inv) => {
+        if (!quickSearchTerm.trim()) return true;
+        const words = quickSearchTerm.toLowerCase().trim().split(/\s+/).filter(Boolean);
+        const searchTarget = [
+            inv.name,
+            inv.keyword,
+            inv.description,
+            inv.part_number,
+            inv.brand,
+            inv.barcode_sku,
+            inv.type,
+        ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
 
-        const inv = inventoryItems.find((i) => String(i.id) === String(invId));
+        return words.every((word) => searchTarget.includes(word));
+    });
+
+    // Inclusions management helpers: Select an item from Quick Search
+    const handleSelectQuickSearchItem = (inv) => {
         if (!inv) return;
 
         const cost = parseFloat(inv.unit_price) || 0;
@@ -217,7 +247,8 @@ const Services = () => {
             inclusions: [...prev.inclusions, newInc],
         }));
 
-        setSelectedInventoryId('');
+        setQuickSearchTerm('');
+        setIsQuickSearchOpen(false);
     };
 
     const handleAddCustomInclusion = (type = 'Products', defaultName = '') => {
@@ -1026,23 +1057,112 @@ const Services = () => {
                                     </div>
                                 </div>
 
-                                {/* Select from Existing Inventory Quick-Picker */}
-                                <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl p-2.5">
-                                    <CubeIcon className="h-4 w-4 text-blue-400 flex-shrink-0 ml-1" />
-                                    <div className="flex-1">
-                                        <select
-                                            value={selectedInventoryId}
-                                            onChange={handleAddInventoryInclusion}
-                                            className="w-full bg-slate-800 border border-slate-700 rounded-lg text-white text-xs px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                        >
-                                            <option value="">Quick Add from Inventory (Select Part, Tire, Oil...)</option>
-                                            {inventoryItems.map((inv) => (
-                                                <option key={inv.id} value={inv.id}>
-                                                    [{inv.type || 'Part'}] {inv.name} (Stock: {inv.stock_quantity}) — ₱{parseFloat(inv.selling_price || inv.unit_price || 0).toLocaleString()}
-                                                </option>
-                                            ))}
-                                        </select>
+                                {/* Searchable Inventory Quick-Picker (Search by keyword or description) */}
+                                <div className="relative" ref={quickSearchRef}>
+                                    <div className="relative flex items-center bg-slate-900 border border-slate-700/80 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 rounded-xl transition-all shadow-sm">
+                                        <MagnifyingGlassIcon className="h-4 w-4 text-blue-400 absolute left-3 pointer-events-none" />
+                                        <input
+                                            type="text"
+                                            value={quickSearchTerm}
+                                            onChange={(e) => {
+                                                setQuickSearchTerm(e.target.value);
+                                                setIsQuickSearchOpen(true);
+                                            }}
+                                            onFocus={() => setIsQuickSearchOpen(true)}
+                                            placeholder="Search items by keyword or description (e.g. Synthetic Oil, PMS, Brake, 5W-30)..."
+                                            className="w-full pl-9 pr-9 py-2 bg-transparent text-white text-xs placeholder:text-slate-400 focus:outline-none"
+                                        />
+                                        {quickSearchTerm ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setQuickSearchTerm('');
+                                                    setIsQuickSearchOpen(false);
+                                                }}
+                                                className="absolute right-2.5 p-1 text-slate-400 hover:text-white rounded-md hover:bg-slate-800 cursor-pointer"
+                                                title="Clear search"
+                                            >
+                                                <XMarkIcon className="h-3.5 w-3.5" />
+                                            </button>
+                                        ) : (
+                                            <CubeIcon className="h-4 w-4 text-slate-500 absolute right-3 pointer-events-none" />
+                                        )}
                                     </div>
+
+                                    {/* Dropdown Menu Results */}
+                                    {isQuickSearchOpen && (
+                                        <div className="absolute z-50 left-0 right-0 mt-1.5 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-h-72 overflow-y-auto divide-y divide-slate-800/80 backdrop-blur-md">
+                                            {filteredQuickSearchItems.length === 0 ? (
+                                                <div className="p-4 text-center">
+                                                    <p className="text-xs text-slate-300 font-medium">
+                                                        {quickSearchTerm ? `No items found matching "${quickSearchTerm}"` : 'No inventory items available'}
+                                                    </p>
+                                                    <p className="text-[11px] text-slate-500 mt-1">
+                                                        Try searching by generic keyword, brand, description, or part name.
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="px-3 py-1.5 bg-slate-800/80 text-[10px] font-semibold uppercase tracking-wider text-slate-400 flex justify-between items-center sticky top-0 backdrop-blur-md">
+                                                        <span>{filteredQuickSearchItems.length} Available Inventory Items</span>
+                                                        <span className="text-blue-400 font-normal">Click item to add as inclusion</span>
+                                                    </div>
+                                                    {filteredQuickSearchItems.map((inv) => {
+                                                        const sellingPrice =
+                                                            inv.selling_price !== undefined && inv.selling_price !== null
+                                                                 ? parseFloat(inv.selling_price)
+                                                                 : Number(((parseFloat(inv.unit_price) || 0) * (1 + (parseFloat(inv.markup_rate) || 0) / 100)).toFixed(2));
+
+                                                        return (
+                                                            <button
+                                                                key={inv.id}
+                                                                type="button"
+                                                                onClick={() => handleSelectQuickSearchItem(inv)}
+                                                                className="w-full text-left px-3.5 py-2.5 hover:bg-blue-600/15 hover:border-l-2 hover:border-blue-500 transition-colors flex items-center justify-between gap-3 group cursor-pointer"
+                                                            >
+                                                                <div className="min-w-0 flex-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${getItemTypeBadge(inv.type)}`}>
+                                                                            {inv.type || 'Product'}
+                                                                        </span>
+                                                                        <span className="font-semibold text-white text-xs group-hover:text-blue-300 truncate">
+                                                                            {inv.name}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-slate-400">
+                                                                        {inv.part_number && (
+                                                                            <span className="text-slate-500 font-mono text-[10px]">#{inv.part_number}</span>
+                                                                        )}
+                                                                        {inv.brand && (
+                                                                            <span className="text-slate-400 text-[11px]">Brand: {inv.brand}</span>
+                                                                        )}
+                                                                        {inv.keyword && (
+                                                                            <span className="px-1.5 py-0.2 bg-slate-800 text-blue-300 rounded border border-slate-700/80 text-[10px]">
+                                                                                Tags: {inv.keyword}
+                                                                            </span>
+                                                                        )}
+                                                                        {inv.description && (
+                                                                            <span className="text-slate-400 truncate max-w-xs italic text-[11px]">
+                                                                                {inv.description}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="text-right shrink-0">
+                                                                    <div className="font-bold text-emerald-400 text-xs">
+                                                                        ₱{sellingPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    </div>
+                                                                    <div className={`text-[10px] ${inv.stock_quantity > 0 ? 'text-slate-400' : 'text-red-400 font-semibold'}`}>
+                                                                        Stock: {inv.stock_quantity ?? 0}
+                                                                    </div>
+                                                                </div>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </>
+                                             )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Inclusions List Table */}
