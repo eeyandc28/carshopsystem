@@ -294,22 +294,43 @@ const Services = () => {
         }, 0);
     };
 
+    // Dynamically list all types from Item Types master list + standard types
+    const allInclusionTypes = [
+        ...new Set([
+            ...itemTypes.map((t) => t.name).filter(Boolean),
+            'Parts',
+            'Tires',
+            'Wheels',
+            'Oils & Fluids',
+            'Charge / Fee'
+        ])
+    ];
+
+    const getTypeBtnStyle = (typeName = '') => {
+        const t = (typeName || '').toLowerCase();
+        if (t.includes('tire')) return 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/40 text-amber-300';
+        if (t.includes('wheel') || t.includes('rim')) return 'bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/40 text-cyan-300';
+        if (t.includes('oil') || t.includes('fluid') || t.includes('lube') || t.includes('material'))
+            return 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/40 text-emerald-300';
+        if (t.includes('charge') || t.includes('fee')) return 'bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/40 text-purple-300';
+        if (t.includes('battery')) return 'bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/40 text-yellow-300';
+        if (t.includes('brake')) return 'bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/40 text-rose-300';
+        if (t.includes('labor') || t.includes('service')) return 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/40 text-blue-300';
+        return 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200';
+    };
+
     // Helper for category badge styling
-    const getItemTypeBadge = (type) => {
-        switch (type?.toLowerCase()) {
-            case 'tire':
-                return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-            case 'wheel':
-                return 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20';
-            case 'material':
-                return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-            case 'charge':
-                return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
-            case 'labor':
-                return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-            default:
-                return 'bg-slate-800 text-slate-300 border-slate-700';
-        }
+    const getItemTypeBadge = (type = '') => {
+        const t = (type || '').toLowerCase();
+        if (t.includes('tire')) return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+        if (t.includes('wheel') || t.includes('rim')) return 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
+        if (t.includes('oil') || t.includes('fluid') || t.includes('lube') || t.includes('material'))
+            return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+        if (t.includes('charge') || t.includes('fee')) return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
+        if (t.includes('battery')) return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30';
+        if (t.includes('brake')) return 'bg-rose-500/10 text-rose-400 border-rose-500/30';
+        if (t.includes('labor') || t.includes('service')) return 'bg-blue-500/10 text-blue-400 border-blue-500/30';
+        return 'bg-slate-800 text-slate-300 border-slate-700';
     };
 
     // Filtered services
@@ -845,27 +866,18 @@ const Services = () => {
                                     </div>
 
                                     <div className="flex flex-wrap items-center gap-1.5">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleAddCustomInclusion('part')}
-                                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium rounded-lg transition-colors cursor-pointer"
-                                        >
-                                            + Part
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleAddCustomInclusion('tire')}
-                                            className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-medium rounded-lg transition-colors cursor-pointer"
-                                        >
-                                            + Tire / Wheel
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleAddCustomInclusion('charge', 'Environmental & Disposal Fee')}
-                                            className="px-2.5 py-1 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-medium rounded-lg transition-colors cursor-pointer"
-                                        >
-                                            + Charge / Fee
-                                        </button>
+                                        {allInclusionTypes.map((typeName) => (
+                                            <button
+                                                key={typeName}
+                                                type="button"
+                                                onClick={() => handleAddCustomInclusion(typeName)}
+                                                className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all shadow-xs cursor-pointer flex items-center gap-1 ${getTypeBtnStyle(typeName)}`}
+                                                title={`Add ${typeName} inclusion`}
+                                            >
+                                                <span className="font-bold">+</span>
+                                                <span>{typeName}</span>
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
 
@@ -914,16 +926,15 @@ const Services = () => {
                                                 {/* Category Selector */}
                                                 <div className="col-span-3">
                                                     <select
-                                                        value={inc.item_type || 'part'}
+                                                        value={inc.item_type || 'Parts'}
                                                         onChange={(e) => handleUpdateInclusion(idx, 'item_type', e.target.value)}
                                                         className="w-full bg-slate-800 border border-slate-700 rounded-lg text-slate-200 text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                     >
-                                                        <option value="part">Part</option>
-                                                        <option value="tire">Tire</option>
-                                                        <option value="wheel">Wheel / Rim</option>
-                                                        <option value="material">Fluid / Material</option>
-                                                        <option value="charge">Charge / Fee</option>
-                                                        <option value="labor">Extra Labor</option>
+                                                        {allInclusionTypes.map((t) => (
+                                                            <option key={t} value={t}>
+                                                                {t}
+                                                            </option>
+                                                        ))}
                                                     </select>
                                                 </div>
 
