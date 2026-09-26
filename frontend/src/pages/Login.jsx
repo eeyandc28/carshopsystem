@@ -54,7 +54,7 @@ const Login = () => {
                                 {...register('email')}
                                 type="email"
                                 className="mt-1 block w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                placeholder="admin@carshop.com"
+                                placeholder="Enter your email"
                             />
                             {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>}
                         </div>
@@ -86,12 +86,6 @@ const Login = () => {
                         </button>
                     </div>
                 </form>
-
-                <div className="mt-6 text-center">
-                    <p className="text-xs text-slate-500">
-                        Default Credentials: admin@carshop.com / password
-                    </p>
-                </div>
             </div>
         </div>
     );
