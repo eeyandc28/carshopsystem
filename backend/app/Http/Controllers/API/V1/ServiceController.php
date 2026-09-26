@@ -45,6 +45,7 @@ class ServiceController extends Controller
             'type'        => 'nullable|string|max:100',
             'keyword'     => 'nullable|string|max:255',
             'description' => 'nullable|string|max:500',
+            'inclusions'  => 'nullable|array',
             'price'       => 'required|numeric|min:0',
             'is_active'   => 'nullable|boolean',
         ]);
@@ -55,6 +56,7 @@ class ServiceController extends Controller
             'type'        => $validated['type'] ?? null,
             'keyword'     => $validated['keyword'] ?? null,
             'description' => $validated['description'] ?? null,
+            'inclusions'  => $validated['inclusions'] ?? [],
             'price'       => $validated['price'],
             'is_active'   => $validated['is_active'] ?? true,
         ]);
@@ -73,6 +75,7 @@ class ServiceController extends Controller
             'type'        => 'nullable|string|max:100',
             'keyword'     => 'nullable|string|max:255',
             'description' => 'nullable|string|max:500',
+            'inclusions'  => 'nullable|array',
             'price'       => 'required|numeric|min:0',
             'is_active'   => 'nullable|boolean',
         ]);

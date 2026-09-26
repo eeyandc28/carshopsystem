@@ -40,3 +40,6 @@ CREATE TABLE IF NOT EXISTS public.notifications (
 );
 
 CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON public.notifications(user_id, read_at);
+
+-- 3. Add inclusions column to services table
+ALTER TABLE public.services ADD COLUMN IF NOT EXISTS inclusions JSONB DEFAULT '[]'::jsonb;

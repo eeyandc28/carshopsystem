@@ -55,6 +55,8 @@ const JobOrderDetails = () => {
     });
     const [descSearch, setDescSearch] = useState('');
     const [isDescOpen, setIsDescOpen] = useState(false);
+    const [selectedServiceInclusions, setSelectedServiceInclusions] = useState([]);
+    const [includePackageItems, setIncludePackageItems] = useState(true);
     const descDropdownRef = useRef(null);
 
     useEffect(() => {
@@ -130,6 +132,7 @@ const JobOrderDetails = () => {
                 ? parseFloat(item.selling_price)
                 : Number((cost * (1 + markup / 100)).toFixed(2));
 
+            setSelectedServiceInclusions([]);
             setNewItem(prev => ({
                 ...prev,
                 inventory_id: item.id,
@@ -139,6 +142,20 @@ const JobOrderDetails = () => {
             }));
             setDescSearch(item.name);
         } else if (kind === 'srv') {
+            let incs = [];
+            if (Array.isArray(item.inclusions)) {
+                incs = item.inclusions;
+            } else if (typeof item.inclusions === 'string') {
+                try {
+                    incs = JSON.parse(item.inclusions);
+                } catch {
+                    incs = [];
+                }
+            }
+
+            setSelectedServiceInclusions(incs);
+            setIncludePackageItems(incs.length > 0);
+
             setNewItem(prev => ({
                 ...prev,
                 inventory_id: '',
@@ -157,6 +174,21 @@ const JobOrderDetails = () => {
         setUpdating(true);
         try {
             await api.post(`/job-orders/${id}/items`, newItem);
+
+            // If service inclusions are selected, automatically append them as line items
+            if (includePackageItems && selectedServiceInclusions.length > 0) {
+                for (const inc of selectedServiceInclusions) {
+                    await api.post(`/job-orders/${id}/items`, {
+                        item_type: inc.item_type || 'part',
+                        inventory_id: inc.inventory_id || null,
+                        service_id: newItem.service_id || null,
+                        description: inc.name,
+                        quantity: parseFloat(inc.quantity) || 1,
+                        unit_price: parseFloat(inc.unit_price) || 0
+                    });
+                }
+            }
+
             setNewItem({
                 item_type: '',
                 inventory_id: '',
@@ -165,6 +197,8 @@ const JobOrderDetails = () => {
                 quantity: 1,
                 unit_price: 0
             });
+            setSelectedServiceInclusions([]);
+            setIncludePackageItems(true);
             setDescSearch('');
             setIsDescOpen(false);
             fetchOrderItems();
@@ -1300,6 +1334,32 @@ const JobOrderDetails = () => {
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Package Inclusions Notification Banner */}
+                        {selectedServiceInclusions.length > 0 && (
+                            <div className="p-3.5 bg-blue-950/30 border border-blue-500/30 rounded-xl text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-blue-200">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-white">Service Package Inclusions Detected:</span>
+                                        <span className="px-2 py-0.5 bg-blue-600/30 border border-blue-500/40 text-blue-300 rounded font-semibold text-[11px]">
+                                            {selectedServiceInclusions.length} items
+                                        </span>
+                                    </div>
+                                    <p className="text-slate-300 text-[11px] mt-1">
+                                        Includes: {selectedServiceInclusions.map(i => `${i.quantity}x ${i.name} (₱${((parseFloat(i.quantity) || 1) * (parseFloat(i.unit_price) || 0)).toLocaleString()})`).join(', ')}
+                                    </p>
+                                </div>
+                                <label className="flex items-center gap-2 cursor-pointer font-semibold text-white flex-shrink-0 bg-blue-900/40 hover:bg-blue-900/60 px-3 py-1.5 rounded-lg border border-blue-500/40 transition-colors">
+                                    <input
+                                        type="checkbox"
+                                        checked={includePackageItems}
+                                        onChange={(e) => setIncludePackageItems(e.target.checked)}
+                                        className="h-4 w-4 rounded bg-slate-800 border-slate-700 text-blue-600 cursor-pointer"
+                                    />
+                                    <span>Add included items to Order</span>
+                                </label>
+                            </div>
+                        )}
                     </div>
                 </div>
 

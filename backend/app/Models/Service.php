@@ -15,12 +15,14 @@ class Service extends Model
         'type',
         'keyword',
         'description',
+        'inclusions',
         'price',
         'is_active',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'inclusions' => 'array',
         'is_active' => 'boolean',
     ];
 }
