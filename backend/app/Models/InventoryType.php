@@ -19,4 +19,9 @@ class InventoryType extends Model
     {
         return $this->hasMany(Inventory::class, 'type', 'name');
     }
+
+    public function services()
+    {
+        return $this->hasMany(Service::class, 'type', 'name');
+    }
 }

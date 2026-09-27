@@ -36,9 +36,11 @@ class InventoryTypeController extends Controller
             'description' => 'nullable|string|max:500',
         ]);
 
-        // Also update the type string on existing inventory items so grouping stays consistent
+        // Also update the type string on existing inventory items and services so grouping stays consistent
         if ($inventoryType->name !== $validated['name']) {
             \App\Models\Inventory::where('type', $inventoryType->name)
+                ->update(['type' => $validated['name']]);
+            \App\Models\Service::where('type', $inventoryType->name)
                 ->update(['type' => $validated['name']]);
         }
 

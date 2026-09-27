@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
 import {
     WrenchScrewdriverIcon,
@@ -13,7 +14,8 @@ import {
     CubeIcon,
     BanknotesIcon,
     ListBulletIcon,
-    InformationCircleIcon
+    InformationCircleIcon,
+    ArrowTopRightOnSquareIcon
 } from '@heroicons/react/24/outline';
 
 const Services = () => {
@@ -97,17 +99,12 @@ const Services = () => {
         }
     };
 
-    // Dynamically list all types from Item Types master list + inventory types + standard types
+    // Categories dynamically linked directly to the Item Types table (inventory_types)
     const allInclusionTypes = [
         ...new Set([
             ...itemTypes.map((t) => t.name).filter(Boolean),
+            ...(formData.inclusions || []).map((inc) => inc.item_type).filter(Boolean),
             ...inventoryItems.map((i) => i.type).filter(Boolean),
-            'Products',
-            'Parts',
-            'Tires',
-            'Wheels',
-            'Oils & Fluids',
-            'Charge / Fee'
         ])
     ];
 
@@ -136,6 +133,8 @@ const Services = () => {
     };
 
     const openCreateModal = () => {
+        fetchItemTypes();
+        fetchInventory();
         setEditingService(null);
         setFormData(initialFormData);
         setQuickSearchTerm('');
@@ -145,6 +144,8 @@ const Services = () => {
     };
 
     const openEditModal = (service) => {
+        fetchItemTypes();
+        fetchInventory();
         setEditingService(service);
         let parsedInclusions = [];
         if (Array.isArray(service.inclusions)) {
@@ -1031,10 +1032,22 @@ const Services = () => {
                             <div className="space-y-4 bg-slate-950/40 border border-slate-800/80 rounded-xl p-4">
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                                     <div>
-                                        <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                                            <CubeIcon className="h-4 w-4 text-emerald-400" />
-                                            Package Inclusions & Charges
-                                        </h3>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                                                <CubeIcon className="h-4 w-4 text-emerald-400" />
+                                                Package Inclusions & Charges
+                                            </h3>
+                                            <Link
+                                                to="/inventory-types"
+                                                target="_blank"
+                                                className="text-[11px] text-indigo-400 hover:text-indigo-300 hover:underline inline-flex items-center gap-1 font-medium transition-colors"
+                                                title="Manage types in the Item Types table"
+                                            >
+                                                <TagIcon className="h-3 w-3" />
+                                                <span>Item Types Table</span>
+                                                <ArrowTopRightOnSquareIcon className="h-2.5 w-2.5 opacity-70" />
+                                            </Link>
+                                        </div>
                                         <p className="text-[11px] text-slate-400 mt-0.5">
                                             Attach parts, tires, wheels, consumables, or standard fees to this service.
                                         </p>
