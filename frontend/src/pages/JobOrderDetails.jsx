@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -281,6 +281,33 @@ const JobOrderDetails = () => {
         return price === 0 || desc.includes('(included') || desc.includes('[included]');
     };
 
+    // Helper to get inclusions for a service line item
+    const getServiceInclusionsForItem = (item) => {
+        if (!item || !item.description || isItemInclusion(item)) return [];
+        const match = (servicesList || []).find(
+            s => s.name?.toLowerCase().trim() === item.description?.toLowerCase().trim()
+        );
+        if (!match || !match.inclusions) return [];
+
+        let incs = [];
+        if (Array.isArray(match.inclusions)) {
+            incs = match.inclusions;
+        } else if (typeof match.inclusions === 'string') {
+            try {
+                incs = JSON.parse(match.inclusions);
+            } catch {
+                incs = [];
+            }
+        }
+
+        // Filter out any inclusions that are already recorded as separate line items in orderItems to prevent duplicates
+        const existingDescs = (orderItems || []).map(o => (o.description || '').toLowerCase());
+        return incs.filter(inc => {
+            const incName = (inc.name || '').toLowerCase();
+            return !existingDescs.some(d => d.includes(incName) && (d.includes('included') || d.includes('[included]')));
+        });
+    };
+
     const printHtmlInvoice = (title, contentHtml) => {
         let iframe = document.getElementById('carshop-print-iframe');
         if (!iframe) {
@@ -489,20 +516,38 @@ const JobOrderDetails = () => {
         }, 0);
         const finalTotal = calculatedItemsTotal;
 
-        const rows = orderItems.length > 0 ? orderItems.map((item, idx) => {
+        let rowCount = 0;
+        const rows = orderItems.length > 0 ? orderItems.map((item) => {
             const isIncluded = isItemInclusion(item);
-            return `
+            if (!isIncluded) rowCount++;
+            const itemRow = `
             <tr>
-                <td class="text-center">${idx + 1}</td>
+                <td class="text-center">${isIncluded ? '↳' : rowCount}</td>
                 <td>
                     <strong>${item.description || 'N/A'}</strong>
-                    ${isIncluded ? ' <span style="display: inline-block; font-size: 9px; font-weight: 700; color: #047857; background: #d1fae5; border: 1px solid #6ee7b7; padding: 1px 6px; border-radius: 9999px; margin-left: 6px;">INCLUDED</span>' : ''}
+                    ${isIncluded ? ' <span style="display: inline-block; font-size: 8.5px; font-weight: 700; color: #047857; background: #d1fae5; border: 1px solid #6ee7b7; padding: 0.5px 5px; border-radius: 9999px; margin-left: 6px;">INCLUDED</span>' : ''}
                 </td>
-                <td class="text-center">${item.quantity}</td>
+                <td class="text-center">${parseFloat(item.quantity || 1).toFixed(2)}</td>
                 <td class="text-right">${isIncluded ? '<span style="color: #047857; font-weight: 600;">INCLUDED</span>' : `Php ${parseFloat(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
                 <td class="text-right font-bold">${isIncluded ? '<span style="color: #047857; font-weight: 600;">Php 0.00</span>' : `Php ${parseFloat(item.total_price || (item.quantity * item.unit_price) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
             </tr>
-        `;
+            `;
+
+            const catalogInclusions = getServiceInclusionsForItem(item);
+            const inclusionRows = catalogInclusions.map((inc) => `
+            <tr style="background: #f8fafc;">
+                <td class="text-center" style="color: #94a3b8; font-size: 10px;">↳</td>
+                <td style="padding-left: 20px;">
+                    <span style="color: #334155; font-weight: 500;">${inc.name}</span>
+                    <span style="display: inline-block; font-size: 8.5px; font-weight: 700; color: #047857; background: #d1fae5; border: 1px solid #6ee7b7; padding: 0.5px 5px; border-radius: 9999px; margin-left: 6px;">INCLUDED</span>
+                </td>
+                <td class="text-center" style="color: #64748b;">${parseFloat(inc.quantity || 1).toFixed(2)}</td>
+                <td class="text-right" style="color: #047857; font-weight: 600; font-size: 10px;">INCLUDED</td>
+                <td class="text-right font-bold" style="color: #047857; font-size: 10px;">Php 0.00</td>
+            </tr>
+            `).join('');
+
+            return itemRow + inclusionRows;
         }).join('') : `<tr><td colspan="5" class="text-center">No parts or services recorded.</td></tr>`;
 
         const html = `
@@ -582,21 +627,40 @@ const JobOrderDetails = () => {
         }, 0);
         const finalTotal = calculatedItemsTotal;
 
-        const rows = orderItems.length > 0 ? orderItems.map((item, idx) => {
+        let tempRowCount = 0;
+        const rows = orderItems.length > 0 ? orderItems.map((item) => {
             const isIncluded = isItemInclusion(item);
-            return `
+            if (!isIncluded) tempRowCount++;
+            const itemRow = `
             <tr>
-                <td class="text-center">${idx + 1}</td>
+                <td class="text-center">${isIncluded ? '↳' : tempRowCount}</td>
                 <td>
                     <strong>${item.description || 'N/A'}</strong>
-                    ${isIncluded ? ' <span style="display: inline-block; font-size: 9px; font-weight: 700; color: #047857; background: #d1fae5; border: 1px solid #6ee7b7; padding: 1px 6px; border-radius: 9999px; margin-left: 6px;">INCLUDED</span>' : ''}
+                    ${isIncluded ? ' <span style="display: inline-block; font-size: 8.5px; font-weight: 700; color: #047857; background: #d1fae5; border: 1px solid #6ee7b7; padding: 0.5px 5px; border-radius: 9999px; margin-left: 6px;">INCLUDED</span>' : ''}
                 </td>
                 <td class="text-center">${(item.item_type || 'part').toUpperCase()}</td>
-                <td class="text-center">${item.quantity}</td>
+                <td class="text-center">${parseFloat(item.quantity || 1).toFixed(2)}</td>
                 <td class="text-right">${isIncluded ? '<span style="color: #047857; font-weight: 600;">INCLUDED</span>' : `Php ${parseFloat(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
                 <td class="text-right font-bold">${isIncluded ? '<span style="color: #047857; font-weight: 600;">Php 0.00</span>' : `Php ${parseFloat(item.total_price || (item.quantity * item.unit_price) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
             </tr>
-        `;
+            `;
+
+            const catalogInclusions = getServiceInclusionsForItem(item);
+            const inclusionRows = catalogInclusions.map((inc) => `
+            <tr style="background: #f8fafc;">
+                <td class="text-center" style="color: #94a3b8; font-size: 10px;">↳</td>
+                <td style="padding-left: 20px;">
+                    <span style="color: #334155; font-weight: 500;">${inc.name}</span>
+                    <span style="display: inline-block; font-size: 8.5px; font-weight: 700; color: #047857; background: #d1fae5; border: 1px solid #6ee7b7; padding: 0.5px 5px; border-radius: 9999px; margin-left: 6px;">INCLUDED</span>
+                </td>
+                <td class="text-center">${(inc.item_type || 'part').toUpperCase()}</td>
+                <td class="text-center" style="color: #64748b;">${parseFloat(inc.quantity || 1).toFixed(2)}</td>
+                <td class="text-right" style="color: #047857; font-weight: 600; font-size: 10px;">INCLUDED</td>
+                <td class="text-right font-bold" style="color: #047857; font-size: 10px;">Php 0.00</td>
+            </tr>
+            `).join('');
+
+            return itemRow + inclusionRows;
         }).join('') : `<tr><td colspan="6" class="text-center">No parts or services recorded.</td></tr>`;
 
         const html = `
@@ -1053,44 +1117,70 @@ const JobOrderDetails = () => {
                                 <tbody className="divide-y divide-slate-800">
                                     {orderItems.map((item) => {
                                         const isIncluded = isItemInclusion(item);
+                                        const catalogInclusions = getServiceInclusionsForItem(item);
+
                                         return (
-                                            <tr key={item.id} className="group hover:bg-slate-800/10">
-                                                <td className="px-4 py-3 text-slate-400 text-xs uppercase tracking-wider">{item.item_type}</td>
-                                                <td className="px-4 py-3">
-                                                    <div className="text-white text-sm font-medium flex items-center gap-2">
-                                                        <span>{item.description}</span>
-                                                        {isIncluded && (
-                                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                                                                Included
-                                                            </span>
+                                            <Fragment key={item.id}>
+                                                <tr className="group hover:bg-slate-800/10">
+                                                    <td className="px-4 py-3 text-slate-400 text-xs uppercase tracking-wider">{item.item_type}</td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="text-white text-sm font-medium flex items-center gap-2">
+                                                            <span>{item.description}</span>
+                                                            {isIncluded && (
+                                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                                                                    Included
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center text-slate-300 text-sm">{item.quantity}</td>
+                                                    <td className="px-4 py-3 text-right text-sm">
+                                                        {isIncluded ? (
+                                                            <span className="text-emerald-400 font-semibold text-xs">INCLUDED</span>
+                                                        ) : (
+                                                            <span className="text-slate-300">₱{parseFloat(item.unit_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                         )}
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3 text-center text-slate-300 text-sm">{item.quantity}</td>
-                                                <td className="px-4 py-3 text-right text-sm">
-                                                    {isIncluded ? (
-                                                        <span className="text-emerald-400 font-semibold text-xs">INCLUDED</span>
-                                                    ) : (
-                                                        <span className="text-slate-300">₱{parseFloat(item.unit_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 text-right text-sm font-semibold">
-                                                    {isIncluded ? (
-                                                        <span className="text-emerald-400 text-xs font-semibold">₱0.00</span>
-                                                    ) : (
-                                                        <span className="text-white">₱{parseFloat(item.total_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 text-right">
-                                                    <button
-                                                        onClick={() => deleteItem(item.id)}
-                                                        className="p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-                                                        title="Remove item"
-                                                    >
-                                                        <TrashIcon className="h-4 w-4" />
-                                                    </button>
-                                                </td>
-                                            </tr>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right text-sm font-semibold">
+                                                        {isIncluded ? (
+                                                            <span className="text-emerald-400 text-xs font-semibold">₱0.00</span>
+                                                        ) : (
+                                                            <span className="text-white">₱{parseFloat(item.total_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        <button
+                                                            onClick={() => deleteItem(item.id)}
+                                                            className="p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                                                            title="Remove item"
+                                                        >
+                                                            <TrashIcon className="h-4 w-4" />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                {/* Inclusions under this service */}
+                                                {catalogInclusions.map((inc, iIdx) => (
+                                                    <tr key={`inc_${item.id}_${iIdx}`} className="bg-slate-900/40 text-xs border-b border-slate-800/50">
+                                                        <td className="px-4 py-2 text-slate-500 text-[11px] uppercase tracking-wider pl-8 flex items-center gap-1">
+                                                            <span className="text-slate-600">↳</span>
+                                                            <span>{inc.item_type || 'Inclusion'}</span>
+                                                        </td>
+                                                        <td className="px-4 py-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-slate-300 font-medium">{inc.name}</span>
+                                                                <span className="px-2 py-0.2 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                                                    Package Inclusion
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-2 text-center text-slate-400">{inc.quantity}</td>
+                                                        <td className="px-4 py-2 text-right text-emerald-400/90 font-medium text-xs">INCLUDED</td>
+                                                        <td className="px-4 py-2 text-right text-emerald-400/90 font-semibold text-xs">₱0.00</td>
+                                                        <td className="px-4 py-2"></td>
+                                                    </tr>
+                                                ))}
+                                            </Fragment>
                                         );
                                     })}
 
