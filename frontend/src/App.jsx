@@ -40,6 +40,7 @@ import Cashier from './pages/Cashier';
 import DailyIncomeReport from './pages/DailyIncomeReport';
 import InventoryTypes from './pages/InventoryTypes';
 import Services from './pages/Services';
+import UserGuide from './pages/UserGuide';
 
 function App() {
     const { fetchUser, isAuthenticated } = useAuthStore();
@@ -89,6 +90,7 @@ function App() {
                         <Route path="/users" element={<Users />} />
                         <Route path="/roles" element={<Roles />} />
                         <Route path="/audit-logs" element={<AuditLogs />} />
+                        <Route path="/user-guide" element={<UserGuide />} />
                     </Route>
                 </Route>
                 

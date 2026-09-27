@@ -20,13 +20,15 @@ import {
     UserIcon,
     TagIcon,
     WrenchScrewdriverIcon,
-    BellIcon
+    BellIcon,
+    BookOpenIcon
 } from '@heroicons/react/24/outline';
 import PwaInstallPrompt from '../pwa/PwaInstallPrompt';
 import NotificationSettingsModal from '../pwa/NotificationSettingsModal';
 
 const navigation = [
     { name: 'Dashboard',     href: '/',                      icon: HomeIcon,                 permission: 'dashboard.view', roles: ['admin', 'super_admin', 'service_advisor', 'mechanic', 'cashier', 'inventory_staff', 'general_manager', 'sales_staff', 'accountant', 'receptionist'] },
+    { name: 'User Guide',    href: '/user-guide',            icon: BookOpenIcon,             publicForAll: true },
     { name: 'Cashier',       href: '/cashier',               icon: BanknotesIcon,            permission: 'payments.view',  roles: ['admin', 'super_admin', 'cashier', 'accountant', 'general_manager'], group: 'Payments' },
     { name: 'Customers',     href: '/customers',             icon: UserGroupIcon,            permission: 'customers.view', roles: ['admin', 'super_admin', 'service_advisor', 'receptionist', 'sales_staff', 'general_manager'] },
     { name: 'Vehicles',      href: '/vehicles',              icon: TruckIcon,                permission: 'vehicles.view',  roles: ['admin', 'super_admin', 'service_advisor', 'receptionist', 'sales_staff', 'general_manager'] },
@@ -58,6 +60,7 @@ const Sidebar = ({ onClose }) => {
                       (user?.email && user.email.toLowerCase().includes('cashier'));
 
     const filteredNavigation = navigation.filter(item => {
+        if (item.publicForAll || item.href === '/user-guide') return true;
         if (isSuperAdmin) return true;
         if (isCashier && ['/cashier', '/', '/job-orders', '/reports/sales', '/reports/daily-income'].includes(item.href)) {
             return true;
