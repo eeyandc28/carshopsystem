@@ -19,7 +19,8 @@ import {
     PrinterIcon,
     XCircleIcon,
     ChevronUpDownIcon,
-    MagnifyingGlassIcon
+    MagnifyingGlassIcon,
+    SparklesIcon
 } from '@heroicons/react/24/outline';
 
 const statusSteps = [
@@ -175,16 +176,16 @@ const JobOrderDetails = () => {
         try {
             await api.post(`/job-orders/${id}/items`, newItem);
 
-            // If service inclusions are selected, automatically append them as line items
+            // If service inclusions are selected, automatically append them as line items (covered by service price, ₱0.00 charge)
             if (includePackageItems && selectedServiceInclusions.length > 0) {
                 for (const inc of selectedServiceInclusions) {
                     await api.post(`/job-orders/${id}/items`, {
                         item_type: inc.item_type || 'part',
                         inventory_id: inc.inventory_id || null,
                         service_id: newItem.service_id || null,
-                        description: inc.name,
+                        description: `${inc.name} (Included with ${newItem.description})`,
                         quantity: parseFloat(inc.quantity) || 1,
-                        unit_price: parseFloat(inc.unit_price) || 0
+                        unit_price: 0
                     });
                 }
             }
@@ -270,6 +271,14 @@ const JobOrderDetails = () => {
         } finally {
             setUpdating(false);
         }
+    };
+
+    // Helper to determine if an order item is a package inclusion (Php 0.00 charge)
+    const isItemInclusion = (item) => {
+        if (!item) return false;
+        const price = parseFloat(item.unit_price) || 0;
+        const desc = (item.description || '').toLowerCase();
+        return price === 0 || desc.includes('(included') || desc.includes('[included]');
     };
 
     const printHtmlInvoice = (title, contentHtml) => {
@@ -474,18 +483,27 @@ const JobOrderDetails = () => {
     const generateInvoice = () => {
         const now = new Date().toLocaleDateString();
         const invNum = `INV-${(order.order_number || '').split('-')[1] || order.order_number}`;
-        const calculatedItemsTotal = orderItems.reduce((sum, item) => sum + parseFloat(item.total_price || (item.quantity * item.unit_price) || 0), 0);
-        const finalTotal = parseFloat(order.actual_cost || order.estimated_cost || calculatedItemsTotal || 0);
+        const calculatedItemsTotal = orderItems.reduce((sum, item) => {
+            if (isItemInclusion(item)) return sum;
+            return sum + parseFloat(item.total_price || (item.quantity * item.unit_price) || 0);
+        }, 0);
+        const finalTotal = calculatedItemsTotal;
 
-        const rows = orderItems.length > 0 ? orderItems.map((item, idx) => `
+        const rows = orderItems.length > 0 ? orderItems.map((item, idx) => {
+            const isIncluded = isItemInclusion(item);
+            return `
             <tr>
                 <td class="text-center">${idx + 1}</td>
-                <td><strong>${item.description || 'N/A'}</strong></td>
+                <td>
+                    <strong>${item.description || 'N/A'}</strong>
+                    ${isIncluded ? ' <span style="display: inline-block; font-size: 9px; font-weight: 700; color: #047857; background: #d1fae5; border: 1px solid #6ee7b7; padding: 1px 6px; border-radius: 9999px; margin-left: 6px;">INCLUDED</span>' : ''}
+                </td>
                 <td class="text-center">${item.quantity}</td>
-                <td class="text-right">Php ${parseFloat(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                <td class="text-right font-bold">Php ${parseFloat(item.total_price || (item.quantity * item.unit_price) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td class="text-right">${isIncluded ? '<span style="color: #047857; font-weight: 600;">INCLUDED</span>' : `Php ${parseFloat(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
+                <td class="text-right font-bold">${isIncluded ? '<span style="color: #047857; font-weight: 600;">Php 0.00</span>' : `Php ${parseFloat(item.total_price || (item.quantity * item.unit_price) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
             </tr>
-        `).join('') : `<tr><td colspan="5" class="text-center">No parts or services recorded.</td></tr>`;
+        `;
+        }).join('') : `<tr><td colspan="5" class="text-center">No parts or services recorded.</td></tr>`;
 
         const html = `
             <div class="invoice-header">
@@ -558,19 +576,28 @@ const JobOrderDetails = () => {
     const printTemporaryInvoice = () => {
         const now = new Date().toLocaleDateString();
         const tempInvNum = `TINV-${(order.order_number || '').replace(/^JO-/, '')}`;
-        const calculatedItemsTotal = orderItems.reduce((sum, item) => sum + parseFloat(item.total_price || (item.quantity * item.unit_price) || 0), 0);
-        const finalTotal = parseFloat(order.actual_cost || order.estimated_cost || calculatedItemsTotal || 0);
+        const calculatedItemsTotal = orderItems.reduce((sum, item) => {
+            if (isItemInclusion(item)) return sum;
+            return sum + parseFloat(item.total_price || (item.quantity * item.unit_price) || 0);
+        }, 0);
+        const finalTotal = calculatedItemsTotal;
 
-        const rows = orderItems.length > 0 ? orderItems.map((item, idx) => `
+        const rows = orderItems.length > 0 ? orderItems.map((item, idx) => {
+            const isIncluded = isItemInclusion(item);
+            return `
             <tr>
                 <td class="text-center">${idx + 1}</td>
-                <td><strong>${item.description || 'N/A'}</strong></td>
+                <td>
+                    <strong>${item.description || 'N/A'}</strong>
+                    ${isIncluded ? ' <span style="display: inline-block; font-size: 9px; font-weight: 700; color: #047857; background: #d1fae5; border: 1px solid #6ee7b7; padding: 1px 6px; border-radius: 9999px; margin-left: 6px;">INCLUDED</span>' : ''}
+                </td>
                 <td class="text-center">${(item.item_type || 'part').toUpperCase()}</td>
                 <td class="text-center">${item.quantity}</td>
-                <td class="text-right">Php ${parseFloat(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                <td class="text-right font-bold">Php ${parseFloat(item.total_price || (item.quantity * item.unit_price) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td class="text-right">${isIncluded ? '<span style="color: #047857; font-weight: 600;">INCLUDED</span>' : `Php ${parseFloat(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
+                <td class="text-right font-bold">${isIncluded ? '<span style="color: #047857; font-weight: 600;">Php 0.00</span>' : `Php ${parseFloat(item.total_price || (item.quantity * item.unit_price) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
             </tr>
-        `).join('') : `<tr><td colspan="6" class="text-center">No parts or services recorded.</td></tr>`;
+        `;
+        }).join('') : `<tr><td colspan="6" class="text-center">No parts or services recorded.</td></tr>`;
 
         const html = `
             <div class="invoice-header">
@@ -1024,25 +1051,48 @@ const JobOrderDetails = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-800">
-                                    {orderItems.map((item) => (
-                                        <tr key={item.id} className="group hover:bg-slate-800/10">
-                                            <td className="px-4 py-3 text-slate-400 text-xs uppercase tracking-wider">{item.item_type}</td>
-                                            <td className="px-4 py-3">
-                                                <p className="text-white text-sm font-medium">{item.description}</p>
-                                            </td>
-                                            <td className="px-4 py-3 text-center text-slate-300 text-sm">{item.quantity}</td>
-                                            <td className="px-4 py-3 text-right text-slate-300 text-sm">₱{parseFloat(item.unit_price).toLocaleString()}</td>
-                                            <td className="px-4 py-3 text-right text-white font-semibold text-sm">₱{parseFloat(item.total_price).toLocaleString()}</td>
-                                            <td className="px-4 py-3 text-right">
-                                                <button
-                                                    onClick={() => deleteItem(item.id)}
-                                                    className="p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
-                                                >
-                                                    <TrashIcon className="h-4 w-4" />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {orderItems.map((item) => {
+                                        const isIncluded = isItemInclusion(item);
+                                        return (
+                                            <tr key={item.id} className="group hover:bg-slate-800/10">
+                                                <td className="px-4 py-3 text-slate-400 text-xs uppercase tracking-wider">{item.item_type}</td>
+                                                <td className="px-4 py-3">
+                                                    <div className="text-white text-sm font-medium flex items-center gap-2">
+                                                        <span>{item.description}</span>
+                                                        {isIncluded && (
+                                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                                                                Included
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-center text-slate-300 text-sm">{item.quantity}</td>
+                                                <td className="px-4 py-3 text-right text-sm">
+                                                    {isIncluded ? (
+                                                        <span className="text-emerald-400 font-semibold text-xs">INCLUDED</span>
+                                                    ) : (
+                                                        <span className="text-slate-300">₱{parseFloat(item.unit_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3 text-right text-sm font-semibold">
+                                                    {isIncluded ? (
+                                                        <span className="text-emerald-400 text-xs font-semibold">₱0.00</span>
+                                                    ) : (
+                                                        <span className="text-white">₱{parseFloat(item.total_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button
+                                                        onClick={() => deleteItem(item.id)}
+                                                        className="p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                                                        title="Remove item"
+                                                    >
+                                                        <TrashIcon className="h-4 w-4" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
 
                                     {/* Inline Add Item Row */}
                                     <tr className="bg-slate-800/30">
@@ -1332,23 +1382,24 @@ const JobOrderDetails = () => {
                             <div className="p-3.5 bg-blue-950/30 border border-blue-500/30 rounded-xl text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-blue-200">
                                 <div>
                                     <div className="flex items-center gap-2">
+                                        <SparklesIcon className="h-4 w-4 text-blue-400" />
                                         <span className="font-bold text-white">Service Package Inclusions Detected:</span>
                                         <span className="px-2 py-0.5 bg-blue-600/30 border border-blue-500/40 text-blue-300 rounded font-semibold text-[11px]">
                                             {selectedServiceInclusions.length} items
                                         </span>
                                     </div>
                                     <p className="text-slate-300 text-[11px] mt-1">
-                                        Includes: {selectedServiceInclusions.map(i => `${i.quantity}x ${i.name} (₱${((parseFloat(i.quantity) || 1) * (parseFloat(i.unit_price) || 0)).toLocaleString()})`).join(', ')}
+                                        Covered by service price (Php 0.00 extra charge): {selectedServiceInclusions.map(i => `${i.quantity}x ${i.name}`).join(', ')}
                                     </p>
                                 </div>
-                                <label className="flex items-center gap-2 cursor-pointer font-semibold text-white flex-shrink-0 bg-blue-900/40 hover:bg-blue-900/60 px-3 py-1.5 rounded-lg border border-blue-500/40 transition-colors">
+                                <label className="flex items-center gap-2 cursor-pointer font-semibold text-white flex-shrink-0 bg-blue-900/40 hover:bg-blue-900/60 px-3 py-1.5 rounded-lg border border-blue-500/40 transition-colors text-xs">
                                     <input
                                         type="checkbox"
                                         checked={includePackageItems}
                                         onChange={(e) => setIncludePackageItems(e.target.checked)}
                                         className="h-4 w-4 rounded bg-slate-800 border-slate-700 text-blue-600 cursor-pointer"
                                     />
-                                    <span>Add included items to Order</span>
+                                    <span>Add included items to invoice</span>
                                 </label>
                             </div>
                         )}
