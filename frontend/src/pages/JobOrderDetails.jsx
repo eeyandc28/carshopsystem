@@ -772,15 +772,39 @@ const JobOrderDetails = () => {
         const partsCount = orderItems.filter(i => (i.item_type || 'part') === 'part').length;
         const laborCount = orderItems.filter(i => (i.item_type || 'part') !== 'part').length;
 
-        const rows = orderItems.length > 0 ? orderItems.map((item, idx) => `
+        let rowIdx = 0;
+        const rows = orderItems.length > 0 ? orderItems.map((item) => {
+            const isIncluded = isItemInclusion(item);
+            if (!isIncluded) rowIdx++;
+            const itemRow = `
             <tr>
-                <td class="text-center">${idx + 1}</td>
-                <td><strong>${item.description || 'N/A'}</strong></td>
+                <td class="text-center">${isIncluded ? '↳' : rowIdx}</td>
+                <td>
+                    <strong>${item.description || 'N/A'}</strong>
+                    ${isIncluded ? ' <span style="display: inline-block; font-size: 8.5px; font-weight: 700; color: #047857; background: #d1fae5; border: 1px solid #6ee7b7; padding: 0.5px 5px; border-radius: 9999px; margin-left: 6px;">INCLUDED</span>' : ''}
+                </td>
                 <td class="text-center">${(item.item_type || 'part').toUpperCase()}</td>
                 <td class="text-center">${item.quantity}</td>
                 <td class="text-center" style="color: #16a34a; font-weight: 600;">Verified / Installed</td>
             </tr>
-        `).join('') : `<tr><td colspan="5" class="text-center">No parts or services recorded.</td></tr>`;
+            `;
+
+            const catalogInclusions = getServiceInclusionsForItem(item);
+            const inclusionRows = catalogInclusions.map((inc) => `
+            <tr style="background: #f8fafc;">
+                <td class="text-center" style="color: #94a3b8; font-size: 10px;">↳</td>
+                <td style="padding-left: 20px;">
+                    <span style="color: #334155; font-weight: 500;">${inc.name}</span>
+                    <span style="display: inline-block; font-size: 8.5px; font-weight: 700; color: #047857; background: #d1fae5; border: 1px solid #6ee7b7; padding: 0.5px 5px; border-radius: 9999px; margin-left: 6px;">INCLUDED</span>
+                </td>
+                <td class="text-center" style="color: #64748b; font-size: 10px;">${(inc.item_type || 'INCLUSION').toUpperCase()}</td>
+                <td class="text-center" style="color: #64748b;">${inc.quantity}</td>
+                <td class="text-center" style="color: #047857; font-weight: 600; font-size: 10px;">Package Included</td>
+            </tr>
+            `).join('');
+
+            return itemRow + inclusionRows;
+        }).join('') : `<tr><td colspan="5" class="text-center">No parts or services recorded.</td></tr>`;
 
         const html = `
             <div class="invoice-header">
