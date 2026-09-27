@@ -104,6 +104,12 @@ class JobOrderController extends Controller
             'reason' => 'nullable|string',
         ]);
 
+        if ($jobOrder->status !== 'pending') {
+            return response()->json([
+                'message' => 'Only pending job orders can be cancelled.'
+            ], 422);
+        }
+
         if ($jobOrder->status !== 'cancelled') {
             $items = \App\Models\JobOrderItem::where('job_order_id', $jobOrder->id)
                 ->where('item_type', 'part')

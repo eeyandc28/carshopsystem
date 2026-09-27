@@ -253,6 +253,10 @@ const JobOrderDetails = () => {
 
     const handleCancelInvoice = async (e) => {
         e.preventDefault();
+        if (order?.status !== 'pending') {
+            alert('Only pending job orders can be cancelled.');
+            return;
+        }
         setCancelling(true);
         try {
             await api.post(`/job-orders/${id}/cancel`, {
@@ -1037,20 +1041,21 @@ const JobOrderDetails = () => {
                             Cancelled Invoice
                         </button>
                     )}
-                    {order.status !== 'cancelled' ? (
+                    {order.status === 'pending' && (
                         <button
                             onClick={() => setShowCancelModal(true)}
-                            className="flex items-center px-4 py-2 bg-red-500/10 text-red-400 rounded-xl border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/40 transition-all text-sm font-semibold shadow-sm"
-                            title="Cancel this invoice and restore inventory stock"
+                            className="flex items-center px-4 py-2 bg-red-500/10 text-red-400 rounded-xl border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/40 transition-all text-sm font-semibold shadow-sm cursor-pointer"
+                            title="Cancel this pending job order and invoice"
                         >
                             <XCircleIcon className="h-4 w-4 mr-1.5" />
                             Cancel Invoice
                         </button>
-                    ) : (
+                    )}
+                    {order.status === 'cancelled' && (
                         <button
                             onClick={handleReopenOrder}
                             disabled={updating}
-                            className="flex items-center px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-sm font-semibold shadow-sm"
+                            className="flex items-center px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-sm font-semibold shadow-sm cursor-pointer"
                             title="Reopen cancelled invoice"
                         >
                             Reopen Order
