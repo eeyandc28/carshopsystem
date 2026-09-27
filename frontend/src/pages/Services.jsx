@@ -99,42 +99,92 @@ const Services = () => {
         }
     };
 
-    // Categories dynamically linked directly to the Item Types table (inventory_types)
+    // Categories dynamically linked directly to the Item Types table (inventory_types), plus services & inventory
     const allInclusionTypes = [
         ...new Set([
             ...itemTypes.map((t) => t.name).filter(Boolean),
+            'Services',
+            'Labor',
+            ...services.map((s) => s.type).filter(Boolean),
             ...(formData.inclusions || []).map((inc) => inc.item_type).filter(Boolean),
             ...inventoryItems.map((i) => i.type).filter(Boolean),
         ])
     ];
 
-    // Helper to get inventory items tagged with a specific category
+    // Helper to get inventory items & services tagged with a specific category
     const getCategoryMatchingItems = (category) => {
         if (!category) return [];
         const cat = category.trim().toLowerCase();
 
-        return inventoryItems.filter((item) => {
-            const itemType = (item.type || '').trim().toLowerCase();
-            if (!itemType) return false;
+        // 1. Matching inventory items
+        const matchingInventory = inventoryItems
+            .filter((item) => {
+                const itemType = (item.type || '').trim().toLowerCase();
+                if (!itemType) return false;
+                if (itemType === cat) return true;
+                const singularItem = itemType.endsWith('s') ? itemType.slice(0, -1) : itemType;
+                const singularCat = cat.endsWith('s') ? cat.slice(0, -1) : cat;
+                if (singularItem === singularCat) return true;
+                if (cat.includes(singularItem) || itemType.includes(singularCat)) return true;
+                return false;
+            })
+            .map((item) => {
+                const cost = parseFloat(item.unit_price) || 0;
+                const markup = parseFloat(item.markup_rate) || 0;
+                const sellingPrice =
+                    item.selling_price !== undefined && item.selling_price !== null
+                        ? parseFloat(item.selling_price)
+                        : Number((cost * (1 + markup / 100)).toFixed(2));
 
-            // Direct match (case-insensitive)
-            if (itemType === cat) return true;
+                return {
+                    key: 'inv_' + item.id,
+                    id: item.id,
+                    kind: 'inventory',
+                    name: item.name,
+                    type: item.type || 'Products',
+                    price: sellingPrice || cost || 0,
+                    stock_quantity: item.stock_quantity,
+                    code: item.part_number || item.barcode_sku || null,
+                    label: `${item.name} — ₱${(sellingPrice || cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${item.stock_quantity !== undefined ? ` (Stock: ${item.stock_quantity})` : ''}`,
+                };
+            });
 
-            // Singular vs Plural match (e.g. "product" vs "products", "part" vs "parts", "tire" vs "tires", "wheel" vs "wheels")
-            const singularItem = itemType.endsWith('s') ? itemType.slice(0, -1) : itemType;
-            const singularCat = cat.endsWith('s') ? cat.slice(0, -1) : cat;
-            if (singularItem === singularCat) return true;
+        // 2. Matching services from master catalog (excluding current editing service so it doesn't include itself)
+        const matchingServices = services
+            .filter((srv) => {
+                if (editingService && String(srv.id) === String(editingService.id)) return false;
+                const srvType = (srv.type || '').trim().toLowerCase();
+                // If category is "Services" or "Labor", or if srv.type matches category
+                if (cat === 'services' || cat === 'service' || cat === 'labor') {
+                    return true;
+                }
+                if (!srvType) return false;
+                if (srvType === cat) return true;
+                const singularSrv = srvType.endsWith('s') ? srvType.slice(0, -1) : srvType;
+                const singularCat = cat.endsWith('s') ? cat.slice(0, -1) : cat;
+                if (singularSrv === singularCat) return true;
+                if (cat.includes(singularSrv) || srvType.includes(singularCat)) return true;
+                return false;
+            })
+            .map((srv) => ({
+                key: 'srv_' + srv.id,
+                id: srv.id,
+                kind: 'service',
+                name: srv.name,
+                type: srv.type || 'Services',
+                price: parseFloat(srv.price || 0),
+                stock_quantity: undefined,
+                code: srv.code || null,
+                label: `${srv.name} (Service) — ₱${parseFloat(srv.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            }));
 
-            // Contains check (e.g. "oil" in "oils & fluids")
-            if (cat.includes(singularItem) || itemType.includes(singularCat)) return true;
-
-            return false;
-        });
+        return [...matchingServices, ...matchingInventory];
     };
 
     const openCreateModal = () => {
         fetchItemTypes();
         fetchInventory();
+        fetchServices();
         setEditingService(null);
         setFormData(initialFormData);
         setQuickSearchTerm('');
@@ -146,6 +196,7 @@ const Services = () => {
     const openEditModal = (service) => {
         fetchItemTypes();
         fetchInventory();
+        fetchServices();
         setEditingService(service);
         let parsedInclusions = [];
         if (Array.isArray(service.inclusions)) {
@@ -158,21 +209,24 @@ const Services = () => {
             }
         }
 
-        // Hydrate inclusions: match with inventory if exists
+        // Hydrate inclusions: match with inventory or service if exists
         const hydratedInclusions = parsedInclusions.map((inc) => {
             const matches = getCategoryMatchingItems(inc.item_type || '');
             let matchedItem = null;
-            if (inc.inventory_id) {
-                matchedItem = inventoryItems.find((i) => String(i.id) === String(inc.inventory_id));
+            if (inc.service_id) {
+                matchedItem = matches.find((m) => m.kind === 'service' && String(m.id) === String(inc.service_id));
+            } else if (inc.inventory_id) {
+                matchedItem = matches.find((m) => m.kind === 'inventory' && String(m.id) === String(inc.inventory_id));
             } else if (inc.name) {
                 matchedItem = matches.find(
-                    (i) => i.name?.toLowerCase() === inc.name?.toLowerCase()
+                    (m) => m.name?.toLowerCase() === inc.name?.toLowerCase()
                 );
             }
 
             return {
                 ...inc,
-                inventory_id: matchedItem ? matchedItem.id : (inc.inventory_id || null),
+                inventory_id: matchedItem?.kind === 'inventory' ? matchedItem.id : (inc.inventory_id || null),
+                service_id: matchedItem?.kind === 'service' ? matchedItem.id : (inc.service_id || null),
                 is_custom: !matchedItem && matches.length > 0 ? true : (matches.length === 0),
             };
         });
@@ -202,18 +256,43 @@ const Services = () => {
         setError('');
     };
 
-    // Filtered inventory items for quick-add search bar (by keyword, description, name, part #, brand, type)
-    const filteredQuickSearchItems = inventoryItems.filter((inv) => {
+    // Filtered inventory items & services for quick-add search bar
+    const filteredQuickSearchItems = [
+        ...inventoryItems.map((inv) => ({
+            ...inv,
+            item_kind: 'inventory',
+            display_type: inv.type || 'Products',
+            selling_price:
+                inv.selling_price !== undefined && inv.selling_price !== null
+                    ? parseFloat(inv.selling_price)
+                    : Number(((parseFloat(inv.unit_price) || 0) * (1 + (parseFloat(inv.markup_rate) || 0) / 100)).toFixed(2)),
+        })),
+        ...services
+            .filter((srv) => !editingService || String(srv.id) !== String(editingService.id))
+            .map((srv) => ({
+                id: srv.id,
+                name: srv.name,
+                keyword: srv.keyword,
+                description: srv.description,
+                type: srv.type || 'Services',
+                display_type: srv.type || 'Services',
+                part_number: srv.code,
+                unit_price: parseFloat(srv.price || 0),
+                selling_price: parseFloat(srv.price || 0),
+                stock_quantity: undefined,
+                item_kind: 'service',
+            })),
+    ].filter((item) => {
         if (!quickSearchTerm.trim()) return true;
         const words = quickSearchTerm.toLowerCase().trim().split(/\s+/).filter(Boolean);
         const searchTarget = [
-            inv.name,
-            inv.keyword,
-            inv.description,
-            inv.part_number,
-            inv.brand,
-            inv.barcode_sku,
-            inv.type,
+            item.name,
+            item.keyword,
+            item.description,
+            item.part_number,
+            item.brand,
+            item.barcode_sku,
+            item.type,
         ]
             .filter(Boolean)
             .join(' ')
@@ -223,23 +302,20 @@ const Services = () => {
     });
 
     // Inclusions management helpers: Select an item from Quick Search
-    const handleSelectQuickSearchItem = (inv) => {
-        if (!inv) return;
+    const handleSelectQuickSearchItem = (item) => {
+        if (!item) return;
 
-        const cost = parseFloat(inv.unit_price) || 0;
-        const markup = parseFloat(inv.markup_rate) || 0;
-        const sellingPrice =
-            inv.selling_price !== undefined && inv.selling_price !== null
-                ? parseFloat(inv.selling_price)
-                : Number((cost * (1 + markup / 100)).toFixed(2));
+        const isService = item.item_kind === 'service';
+        const price = parseFloat(item.selling_price ?? item.unit_price) || 0;
 
         const newInc = {
             id: Date.now() + Math.random(),
-            item_type: inv.type || 'Products',
-            inventory_id: inv.id,
-            name: inv.name,
+            item_type: item.type || (isService ? 'Services' : 'Products'),
+            inventory_id: isService ? null : item.id,
+            service_id: isService ? item.id : null,
+            name: item.name,
             quantity: 1,
-            unit_price: sellingPrice || cost || 0,
+            unit_price: price,
             is_custom: false,
         };
 
@@ -258,6 +334,7 @@ const Services = () => {
             id: Date.now() + Math.random(),
             item_type: type,
             inventory_id: null,
+            service_id: null,
             name: defaultName,
             quantity: 1,
             unit_price: 0,
@@ -278,7 +355,11 @@ const Services = () => {
             const current = next[index] || {};
 
             // Check if current item still belongs to this new category
-            const currentItemStillMatches = matches.some((item) => String(item.id) === String(current.inventory_id));
+            const currentItemStillMatches = matches.some((item) =>
+                (current.service_id && item.kind === 'service' && String(item.id) === String(current.service_id)) ||
+                (current.inventory_id && item.kind === 'inventory' && String(item.id) === String(current.inventory_id)) ||
+                (current.name && item.name?.toLowerCase() === current.name?.toLowerCase())
+            );
 
             if (currentItemStillMatches) {
                 next[index] = {
@@ -286,21 +367,23 @@ const Services = () => {
                     item_type: newCategory,
                 };
             } else if (matches.length > 0) {
-                // Category has matching inventory items - reset to prompt selection
+                // Category has matching items or services - reset to prompt selection
                 next[index] = {
                     ...current,
                     item_type: newCategory,
                     inventory_id: '',
+                    service_id: '',
                     name: '',
                     unit_price: 0,
                     is_custom: false,
                 };
             } else {
-                // No inventory items for this category (e.g. Charge / Fee) -> switch to manual text input
+                // No items or services for this category -> switch to manual text input
                 next[index] = {
                     ...current,
                     item_type: newCategory,
                     inventory_id: null,
+                    service_id: null,
                     is_custom: true,
                 };
             }
@@ -308,14 +391,15 @@ const Services = () => {
         });
     };
 
-    // When an inventory item is selected from the category's loaded items
-    const handleSelectInclusionItem = (index, inventoryId, matchingItems) => {
-        if (inventoryId === '__custom__') {
+    // When an inventory item or service is selected from the category's loaded items
+    const handleSelectInclusionItem = (index, selectedKey, matchingItems) => {
+        if (selectedKey === '__custom__') {
             setFormData((prev) => {
                 const next = [...prev.inclusions];
                 next[index] = {
                     ...next[index],
                     inventory_id: null,
+                    service_id: null,
                     is_custom: true,
                 };
                 return { ...prev, inclusions: next };
@@ -323,8 +407,8 @@ const Services = () => {
             return;
         }
 
-        const selectedItem = (matchingItems || inventoryItems).find(
-            (item) => String(item.id) === String(inventoryId)
+        const selectedItem = (matchingItems || []).find(
+            (item) => String(item.key) === String(selectedKey) || String(item.id) === String(selectedKey)
         );
 
         if (!selectedItem) {
@@ -333,6 +417,7 @@ const Services = () => {
                 next[index] = {
                     ...next[index],
                     inventory_id: '',
+                    service_id: '',
                     name: '',
                     unit_price: 0,
                 };
@@ -341,20 +426,14 @@ const Services = () => {
             return;
         }
 
-        const cost = parseFloat(selectedItem.unit_price) || 0;
-        const markup = parseFloat(selectedItem.markup_rate) || 0;
-        const sellingPrice =
-            selectedItem.selling_price !== undefined && selectedItem.selling_price !== null
-                ? parseFloat(selectedItem.selling_price)
-                : Number((cost * (1 + markup / 100)).toFixed(2));
-
         setFormData((prev) => {
             const next = [...prev.inclusions];
             next[index] = {
                 ...next[index],
-                inventory_id: selectedItem.id,
+                inventory_id: selectedItem.kind === 'inventory' ? selectedItem.id : null,
+                service_id: selectedItem.kind === 'service' ? selectedItem.id : null,
                 name: selectedItem.name,
-                unit_price: sellingPrice || cost || 0,
+                unit_price: selectedItem.price || 0,
                 is_custom: false,
             };
             return { ...prev, inclusions: next };
@@ -423,6 +502,7 @@ const Services = () => {
                 id: inc.id || Date.now(),
                 item_type: inc.item_type || 'Products',
                 inventory_id: inc.inventory_id || null,
+                service_id: inc.service_id || null,
                 name: (inc.name || '').trim(),
                 quantity: parseFloat(inc.quantity) || 1,
                 unit_price: parseFloat(inc.unit_price) || 0,
@@ -1120,14 +1200,12 @@ const Services = () => {
                                                         <span className="text-blue-400 font-normal">Click item to add as inclusion</span>
                                                     </div>
                                                     {filteredQuickSearchItems.map((inv) => {
-                                                        const sellingPrice =
-                                                            inv.selling_price !== undefined && inv.selling_price !== null
-                                                                 ? parseFloat(inv.selling_price)
-                                                                 : Number(((parseFloat(inv.unit_price) || 0) * (1 + (parseFloat(inv.markup_rate) || 0) / 100)).toFixed(2));
+                                                        const isService = inv.item_kind === 'service';
+                                                        const sellingPrice = inv.selling_price ?? inv.unit_price ?? 0;
 
                                                         return (
                                                             <button
-                                                                key={inv.id}
+                                                                key={inv.key || `${inv.item_kind || 'inv'}_${inv.id}`}
                                                                 type="button"
                                                                 onClick={() => handleSelectQuickSearchItem(inv)}
                                                                 className="w-full text-left px-3.5 py-2.5 hover:bg-blue-600/15 hover:border-l-2 hover:border-blue-500 transition-colors flex items-center justify-between gap-3 group cursor-pointer"
@@ -1135,7 +1213,7 @@ const Services = () => {
                                                                 <div className="min-w-0 flex-1">
                                                                     <div className="flex items-center gap-2">
                                                                         <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${getItemTypeBadge(inv.type)}`}>
-                                                                            {inv.type || 'Product'}
+                                                                            {inv.type || (isService ? 'Service' : 'Product')}
                                                                         </span>
                                                                         <span className="font-semibold text-white text-xs group-hover:text-blue-300 truncate">
                                                                             {inv.name}
@@ -1162,11 +1240,15 @@ const Services = () => {
                                                                 </div>
                                                                 <div className="text-right shrink-0">
                                                                     <div className="font-bold text-emerald-400 text-xs">
-                                                                        ₱{sellingPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                        ₱{Number(sellingPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                                     </div>
-                                                                    <div className={`text-[10px] ${inv.stock_quantity > 0 ? 'text-slate-400' : 'text-red-400 font-semibold'}`}>
-                                                                        Stock: {inv.stock_quantity ?? 0}
-                                                                    </div>
+                                                                    {isService ? (
+                                                                        <div className="text-[10px] text-blue-400 font-medium">Service</div>
+                                                                    ) : (
+                                                                        <div className={`text-[10px] ${inv.stock_quantity > 0 ? 'text-slate-400' : 'text-red-400 font-semibold'}`}>
+                                                                            Stock: {inv.stock_quantity ?? 0}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </button>
                                                         );
@@ -1224,7 +1306,13 @@ const Services = () => {
                                                         {hasMatches && !inc.is_custom ? (
                                                             <div className="flex items-center gap-1">
                                                                 <select
-                                                                    value={inc.inventory_id || ''}
+                                                                    value={
+                                                                        inc.service_id
+                                                                            ? `srv_${inc.service_id}`
+                                                                            : inc.inventory_id
+                                                                            ? `inv_${inc.inventory_id}`
+                                                                            : (matches.find((m) => m.name?.toLowerCase() === inc.name?.toLowerCase())?.key || '')
+                                                                    }
                                                                     onChange={(e) => handleSelectInclusionItem(idx, e.target.value, matches)}
                                                                     className="w-full bg-slate-800 border border-slate-700 rounded-lg text-white text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 truncate cursor-pointer"
                                                                 >
@@ -1232,8 +1320,8 @@ const Services = () => {
                                                                         -- Select {inc.item_type || 'Item'} ({matches.length}) --
                                                                     </option>
                                                                     {matches.map((item) => (
-                                                                        <option key={item.id} value={item.id}>
-                                                                            {item.name} — ₱{Number(item.selling_price || item.unit_price || 0).toLocaleString()} {item.stock_quantity !== undefined ? `(Stock: ${item.stock_quantity})` : ''}
+                                                                        <option key={item.key} value={item.key}>
+                                                                            {item.label}
                                                                         </option>
                                                                     ))}
                                                                     <option value="__custom__">✏️ Custom / Manual item name...</option>
