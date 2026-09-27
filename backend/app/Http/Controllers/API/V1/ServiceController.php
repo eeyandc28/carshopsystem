@@ -46,7 +46,7 @@ class ServiceController extends Controller
             'keyword'     => 'nullable|string|max:255',
             'description' => 'nullable|string|max:500',
             'inclusions'  => 'nullable|array',
-            'price'       => 'required|numeric|min:0',
+            'price'       => 'nullable|numeric|min:0',
             'is_active'   => 'nullable|boolean',
         ]);
 
@@ -57,7 +57,7 @@ class ServiceController extends Controller
             'keyword'     => $validated['keyword'] ?? null,
             'description' => $validated['description'] ?? null,
             'inclusions'  => $validated['inclusions'] ?? [],
-            'price'       => $validated['price'],
+            'price'       => $validated['price'] ?? 0,
             'is_active'   => $validated['is_active'] ?? true,
         ]);
 
@@ -76,9 +76,13 @@ class ServiceController extends Controller
             'keyword'     => 'nullable|string|max:255',
             'description' => 'nullable|string|max:500',
             'inclusions'  => 'nullable|array',
-            'price'       => 'required|numeric|min:0',
+            'price'       => 'nullable|numeric|min:0',
             'is_active'   => 'nullable|boolean',
         ]);
+
+        if (array_key_exists('price', $validated)) {
+            $validated['price'] = $validated['price'] ?? 0;
+        }
 
         $service->update($validated);
 

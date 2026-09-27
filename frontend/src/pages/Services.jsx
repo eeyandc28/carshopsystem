@@ -412,10 +412,6 @@ const Services = () => {
             setError('Service name is required.');
             return;
         }
-        if (formData.price === '' || isNaN(formData.price) || Number(formData.price) < 0) {
-            setError('Please enter a valid price/labor rate (0 or higher).');
-            return;
-        }
 
         setSaving(true);
         setError('');
@@ -432,12 +428,16 @@ const Services = () => {
                 total_price: Number(((parseFloat(inc.quantity) || 1) * (parseFloat(inc.unit_price) || 0)).toFixed(2)),
             }));
 
+        const numericPrice = formData.price === '' || formData.price === null || isNaN(formData.price)
+            ? 0
+            : Math.max(0, parseFloat(formData.price));
+
         const payload = {
             name: formData.name.trim(),
             code: formData.code.trim() || null,
             type: formData.type.trim() || null,
             keyword: formData.keyword.trim() || null,
-            price: parseFloat(formData.price),
+            price: numericPrice,
             description: formData.description.trim() || null,
             inclusions: cleanedInclusions,
             is_active: formData.is_active,
@@ -735,7 +735,7 @@ const Services = () => {
                                         {/* Standard Labor Price */}
                                         <td className="px-6 py-4 text-right">
                                             <span className="font-bold text-white text-sm">
-                                                ₱{parseFloat(service.price).toLocaleString(undefined, {
+                                                ₱{parseFloat(service.price || 0).toLocaleString(undefined, {
                                                     minimumFractionDigits: 2,
                                                     maximumFractionDigits: 2,
                                                 })}
@@ -990,7 +990,7 @@ const Services = () => {
 
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                                            Labor Rate / Base Fee (₱) <span className="text-red-400">*</span>
+                                            Labor Rate / Base Fee (₱)
                                         </label>
                                         <div className="relative">
                                             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
@@ -998,9 +998,8 @@ const Services = () => {
                                             </span>
                                             <input
                                                 type="number"
-                                                step="0.01"
+                                                step="any"
                                                 min="0"
-                                                required
                                                 placeholder="0.00"
                                                 value={formData.price}
                                                 onChange={(e) =>

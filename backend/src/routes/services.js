@@ -32,11 +32,13 @@ router.get('/', async (req, res) => {
 // POST /services
 router.post('/', async (req, res) => {
     try {
-        const { name, code, type, keyword, price, description, is_active } = req.body;
+        const { name, code, type, keyword, price, description, inclusions, is_active } = req.body;
 
         if (!name || !name.trim()) {
             return res.status(422).json({ message: 'Service name is required' });
         }
+
+        const parsedPrice = price !== undefined && price !== '' && !isNaN(price) ? Math.max(0, parseFloat(price)) : 0.00;
 
         const { data, error } = await supabase
             .from('services')
@@ -46,7 +48,8 @@ router.post('/', async (req, res) => {
                 type: type ? type.trim() : null,
                 keyword: keyword ? keyword.trim() : null,
                 description: description ? description.trim() : null,
-                price: parseFloat(price) || 0.00,
+                inclusions: Array.isArray(inclusions) ? inclusions : [],
+                price: parsedPrice,
                 is_active: is_active !== undefined ? Boolean(is_active) : true
             })
             .select()
@@ -63,7 +66,7 @@ router.post('/', async (req, res) => {
 // PUT /services/:id
 router.put('/:id', async (req, res) => {
     try {
-        const { name, code, type, keyword, price, description, is_active } = req.body;
+        const { name, code, type, keyword, price, description, inclusions, is_active } = req.body;
         const updates = { updated_at: new Date() };
 
         if (name !== undefined) updates.name = name.trim();
@@ -71,7 +74,8 @@ router.put('/:id', async (req, res) => {
         if (type !== undefined) updates.type = type ? type.trim() : null;
         if (keyword !== undefined) updates.keyword = keyword ? keyword.trim() : null;
         if (description !== undefined) updates.description = description ? description.trim() : null;
-        if (price !== undefined) updates.price = parseFloat(price) || 0.00;
+        if (inclusions !== undefined) updates.inclusions = Array.isArray(inclusions) ? inclusions : [];
+        if (price !== undefined) updates.price = price !== '' && !isNaN(price) ? Math.max(0, parseFloat(price)) : 0.00;
         if (is_active !== undefined) updates.is_active = Boolean(is_active);
 
         const { data, error } = await supabase
