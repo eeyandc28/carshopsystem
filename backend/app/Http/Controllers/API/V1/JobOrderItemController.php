@@ -101,7 +101,7 @@ class JobOrderItemController extends Controller
         $item = JobOrderItem::findOrFail($itemId);
         $jobOrderId = $item->job_order_id;
 
-        // If it has inventory_id, restore stock
+        // 1. If it has direct inventory_id, restore stock
         if ($item->inventory_id) {
             $inv = Inventory::find($item->inventory_id);
             if ($inv) {
@@ -109,21 +109,42 @@ class JobOrderItemController extends Controller
             }
         }
 
-        // Restore stock if it was a service with package inclusions
-        $service = Service::whereRaw('LOWER(name) = ?', [strtolower(trim($item->description))])->first();
-        if ($service && !empty($service->inclusions)) {
-            $inclusions = is_array($service->inclusions) ? $service->inclusions : (json_decode($service->inclusions, true) ?: []);
-            foreach ($inclusions as $inc) {
-                $incInvId = $inc['inventory_id'] ?? null;
-                if (!$incInvId && !empty($inc['name'])) {
-                    $matchInv = Inventory::whereRaw('LOWER(name) = ?', [strtolower(trim($inc['name']))])->first();
-                    if ($matchInv) $incInvId = $matchInv->id;
+        // 2. Cascade delete any child package inclusions belonging to this item in the same job order
+        $includedChildItems = JobOrderItem::where('job_order_id', $jobOrderId)
+            ->where('id', '!=', $item->id)
+            ->where(function ($q) use ($item) {
+                $q->where('description', 'like', "%(Included with {$item->description})%")
+                  ->orWhere('description', 'like', "%[Included with {$item->description}]%");
+            })
+            ->get();
+
+        foreach ($includedChildItems as $child) {
+            if ($child->inventory_id) {
+                $cInv = Inventory::find($child->inventory_id);
+                if ($cInv) {
+                    $cInv->increment('stock_quantity', (int)$child->quantity);
                 }
-                if ($incInvId) {
-                    $incInv = Inventory::find($incInvId);
-                    if ($incInv) {
-                        $qtyToRestore = (int)($inc['quantity'] ?? 1) * (int)$item->quantity;
-                        $incInv->increment('stock_quantity', $qtyToRestore);
+            }
+            $child->delete();
+        }
+
+        // 3. If it was a service with catalog package inclusions, and inclusions were NOT separate rows, restore stock
+        if ($includedChildItems->isEmpty()) {
+            $service = Service::whereRaw('LOWER(name) = ?', [strtolower(trim($item->description))])->first();
+            if ($service && !empty($service->inclusions)) {
+                $inclusions = is_array($service->inclusions) ? $service->inclusions : (json_decode($service->inclusions, true) ?: []);
+                foreach ($inclusions as $inc) {
+                    $incInvId = $inc['inventory_id'] ?? null;
+                    if (!$incInvId && !empty($inc['name'])) {
+                        $matchInv = Inventory::whereRaw('LOWER(name) = ?', [strtolower(trim($inc['name']))])->first();
+                        if ($matchInv) $incInvId = $matchInv->id;
+                    }
+                    if ($incInvId) {
+                        $incInv = Inventory::find($incInvId);
+                        if ($incInv) {
+                            $qtyToRestore = (int)($inc['quantity'] ?? 1) * (int)$item->quantity;
+                            $incInv->increment('stock_quantity', $qtyToRestore);
+                        }
                     }
                 }
             }
@@ -131,7 +152,7 @@ class JobOrderItemController extends Controller
 
         $item->delete();
 
-        // Update actual_cost in job order
+        // 4. Update actual_cost in job order
         $jobOrder = JobOrder::find($jobOrderId);
         if ($jobOrder) {
             $totalActual = JobOrderItem::where('job_order_id', $jobOrderId)->sum('total_price');

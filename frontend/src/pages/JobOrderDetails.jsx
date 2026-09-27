@@ -48,6 +48,8 @@ const JobOrderDetails = () => {
     const [cancelReasonCategory, setCancelReasonCategory] = useState('Customer Request / Decided Not to Proceed');
     const [cancelReason, setCancelReason] = useState('Customer Request / Decided Not to Proceed');
     const [cancelling, setCancelling] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
+    const [deletingItem, setDeletingItem] = useState(false);
     const [newItem, setNewItem] = useState({
         item_type: '',
         inventory_id: '',
@@ -226,17 +228,24 @@ const JobOrderDetails = () => {
         }
     };
 
-    const deleteItem = async (itemId) => {
-        if (!window.confirm('Remove this item?')) return;
-        setUpdating(true);
+    const deleteItem = (item) => {
+        setItemToDelete(item);
+    };
+
+    const confirmDeleteItem = async () => {
+        if (!itemToDelete) return;
+        setDeletingItem(true);
         try {
-            await api.delete(`/job-orders/items/${itemId}`);
+            await api.delete(`/job-orders/items/${itemToDelete.id}`);
+            setItemToDelete(null);
             fetchOrderItems();
             fetchOrderDetails();
+            fetchInventory();
         } catch (error) {
-            alert('Failed to delete item');
+            console.error('Failed to delete item', error);
+            alert(error.response?.data?.message || 'Failed to delete item');
         } finally {
-            setUpdating(false);
+            setDeletingItem(false);
         }
     };
 
@@ -1309,8 +1318,9 @@ const JobOrderDetails = () => {
                                                     </td>
                                                     <td className="px-4 py-3 text-right">
                                                         <button
-                                                            onClick={() => deleteItem(item.id)}
-                                                            className="p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                                                            type="button"
+                                                            onClick={() => deleteItem(item)}
+                                                            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all cursor-pointer"
                                                             title="Remove item"
                                                         >
                                                             <TrashIcon className="h-4 w-4" />
@@ -1871,6 +1881,75 @@ const JobOrderDetails = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            {/* Delete Item Confirmation Modal */}
+            {itemToDelete && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+                        <div className="flex items-center space-x-3 text-red-400">
+                            <div className="p-2.5 bg-red-500/10 border border-red-500/20 rounded-xl">
+                                <TrashIcon className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Remove Item</h3>
+                                <p className="text-xs text-slate-400">Confirm removal from Job Order</p>
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-2 text-sm">
+                            <div className="flex justify-between items-center text-slate-300">
+                                <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Item</span>
+                                <span className="font-semibold text-white">{itemToDelete.description}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-slate-300">
+                                <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Type</span>
+                                <span className="capitalize text-slate-300">{itemToDelete.item_type}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-slate-300">
+                                <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Qty & Price</span>
+                                <span className="font-medium text-slate-200">
+                                    {itemToDelete.quantity} × ₱{parseFloat(itemToDelete.unit_price).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                </span>
+                            </div>
+                            <div className="border-t border-slate-800 pt-2 flex justify-between items-center font-bold">
+                                <span className="text-slate-400 text-xs uppercase tracking-wider">Total</span>
+                                <span className="text-emerald-400">
+                                    ₱{parseFloat(itemToDelete.total_price).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                </span>
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-slate-400">
+                            Removing this item will automatically restore associated stock back to inventory and recalculate the job order total.
+                        </p>
+
+                        <div className="pt-2 flex justify-end space-x-3">
+                            <button
+                                type="button"
+                                disabled={deletingItem}
+                                onClick={() => setItemToDelete(null)}
+                                className="px-4 py-2 text-sm font-semibold text-slate-400 hover:text-white transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                disabled={deletingItem}
+                                onClick={confirmDeleteItem}
+                                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-red-600/20 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                            >
+                                {deletingItem ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        <span>Removing...</span>
+                                    </>
+                                ) : (
+                                    'Remove Item'
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
