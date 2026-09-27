@@ -130,9 +130,21 @@ const JobOrders = () => {
                                             <span className="text-sm text-slate-300">{order.service_type || 'Repair'}</span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${statusColors[order.status] || statusColors.pending}`}>
-                                                {order.status.replace('-', ' ')}
-                                            </span>
+                                            <div className="flex flex-col items-start gap-1">
+                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${statusColors[order.status] || statusColors.pending}`}>
+                                                    {order.status.replace('-', ' ')}
+                                                </span>
+                                                {order.payment_status === 'paid' && (
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                                        Paid
+                                                    </span>
+                                                )}
+                                                {order.payment_status === 'partial' && (
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                                                        Partial
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <span className="text-sm text-white font-semibold">

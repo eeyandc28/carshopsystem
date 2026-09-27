@@ -20,7 +20,9 @@ import {
     XCircleIcon,
     ChevronUpDownIcon,
     MagnifyingGlassIcon,
-    SparklesIcon
+    SparklesIcon,
+    CheckCircleIcon,
+    BanknotesIcon
 } from '@heroicons/react/24/outline';
 
 const statusSteps = [
@@ -552,6 +554,11 @@ const JobOrderDetails = () => {
             return sum + parseFloat(item.total_price || (item.quantity * item.unit_price) || 0);
         }, 0);
         const finalTotal = calculatedItemsTotal;
+        const isPaid = order.payment_status === 'paid';
+        const discountAmount = parseFloat(order.discount || 0);
+        const paidAmount = parseFloat(order.amount_paid || 0);
+        const netTotal = Math.max(0, finalTotal - discountAmount);
+        const balanceDue = isPaid ? 0 : Math.max(0, netTotal - paidAmount);
 
         let rowCount = 0;
         const rows = orderItems.length > 0 ? orderItems.map((item) => {
@@ -593,10 +600,13 @@ const JobOrderDetails = () => {
                     <img src="/logo.png" class="brand-logo" alt="RADI8" />
                 </div>
                 <div class="doc-meta">
-                    <div class="doc-badge" style="color: #0f172a;">INVOICE</div>
+                    <div class="doc-badge" style="color: ${isPaid ? '#059669' : '#0f172a'};">
+                        INVOICE ${isPaid ? '<span style="background: #d1fae5; color: #047857; border: 1px solid #6ee7b7; font-size: 11px; padding: 2px 8px; border-radius: 9999px; margin-left: 6px;">PAID</span>' : ''}
+                    </div>
                     <div class="doc-number"><strong>Invoice #:</strong> ${invNum}</div>
                     <div class="doc-number"><strong>Date:</strong> ${now}</div>
                     <div class="doc-number"><strong>Order #:</strong> ${order.order_number}</div>
+                    <div class="doc-number"><strong>Payment Status:</strong> <span style="font-weight: 700; color: ${isPaid ? '#047857' : '#64748b'};">${(order.payment_status || 'unpaid').toUpperCase()}</span></div>
                 </div>
             </div>
 
@@ -635,11 +645,39 @@ const JobOrderDetails = () => {
                     <span>Subtotal:</span>
                     <span>Php ${finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
+                ${discountAmount > 0 ? `
+                <div class="total-line" style="color: #047857;">
+                    <span>Discount:</span>
+                    <span>- Php ${discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>` : ''}
                 <div class="total-line grand-total">
-                    <span>TOTAL DUE:</span>
-                    <span style="color: #2563eb;">Php ${finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span>${isPaid ? 'TOTAL INVOICE:' : 'TOTAL DUE:'}</span>
+                    <span style="color: #2563eb;">Php ${netTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                ${(isPaid || paidAmount > 0) ? `
+                <div class="total-line" style="color: #047857; font-weight: 600; margin-top: 4px; border-top: 1px dashed #cbd5e1; padding-top: 4px;">
+                    <span>Amount Paid:</span>
+                    <span>Php ${(isPaid ? (paidAmount > 0 ? paidAmount : netTotal) : paidAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div class="total-line" style="color: ${isPaid ? '#047857' : '#dc2626'}; font-weight: 800; font-size: 13px;">
+                    <span>BALANCE DUE:</span>
+                    <span>${isPaid ? 'Php 0.00 [PAID IN FULL]' : `Php ${balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</span>
+                </div>` : ''}
+            </div>
+
+            ${isPaid ? `
+            <div style="margin: 16px 0; padding: 10px 14px; background: #ecfdf5; border: 1.5px solid #10b981; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-weight: 800; color: #065f46; font-size: 11px; letter-spacing: 0.5px;">✓ PAYMENT COMPLETED & SETTLED</div>
+                    <div style="font-size: 10px; color: #047857; margin-top: 2px;">
+                        ${(order.payments && order.payments.length > 0) ? `Method: ${order.payments[0].payment_method || 'Cash'} ${order.payments[0].reference_number ? `| Ref: ${order.payments[0].reference_number}` : ''} | Date: ${new Date(order.payments[0].payment_date || order.payments[0].created_at).toLocaleDateString()}` : 'Payment officially received and recorded in system.'}
+                    </div>
+                </div>
+                <div style="font-weight: 900; color: #047857; font-size: 15px; border: 2px solid #047857; padding: 2px 10px; border-radius: 4px; letter-spacing: 1px;">
+                    PAID
                 </div>
             </div>
+            ` : ''}
 
             <div class="signatures">
                 <div class="signature-box">Service Advisor Signature</div>
@@ -994,15 +1032,29 @@ const JobOrderDetails = () => {
 
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-white flex items-center">
+                    <h1 className="text-2xl font-bold text-white flex items-center flex-wrap gap-2.5">
                         {order.order_number}
-                        <span className={`ml-4 px-3 py-1 rounded-full text-xs font-bold uppercase border ${
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase border ${
                             order.status === 'cancelled'
                                 ? 'bg-red-500/10 text-red-400 border-red-500/20'
                                 : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
                         }`}>
                             {order.status.replace('_', ' ')}
                         </span>
+                        {order.payment_status === 'paid' ? (
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase border bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shadow-sm">
+                                <CheckCircleIcon className="h-3.5 w-3.5 mr-1 text-emerald-400" />
+                                Paid
+                            </span>
+                        ) : order.payment_status === 'partial' ? (
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase border bg-amber-500/15 text-amber-400 border-amber-500/30">
+                                Partial Payment
+                            </span>
+                        ) : (
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase border bg-slate-800 text-slate-400 border-slate-700">
+                                Unpaid
+                            </span>
+                        )}
                     </h1>
                     <p className="text-slate-400">Created on {new Date(order.created_at).toLocaleDateString()}</p>
                 </div>
@@ -1058,6 +1110,7 @@ const JobOrderDetails = () => {
                             className="flex items-center px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-sm font-semibold shadow-sm cursor-pointer"
                             title="Reopen cancelled invoice"
                         >
+                            <CheckCircleIcon className="h-4 w-4 mr-1.5 text-emerald-400" />
                             Reopen Order
                         </button>
                     )}
@@ -1093,6 +1146,50 @@ const JobOrderDetails = () => {
                         <PrinterIcon className="h-3.5 w-3.5 mr-1.5" />
                         Print Cancelled Document
                     </button>
+                </div>
+            )}
+
+            {/* Payment Completed Banner */}
+            {order.payment_status === 'paid' && (
+                <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-emerald-300 shadow-lg">
+                    <div className="flex items-center space-x-3.5">
+                        <div className="p-2.5 bg-emerald-500/20 rounded-xl text-emerald-400 border border-emerald-500/30 flex-shrink-0">
+                            <CheckCircleIcon className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h4 className="font-bold text-white text-base">Payment Completed</h4>
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                                    Fully Settled
+                                </span>
+                            </div>
+                            <p className="text-xs text-emerald-300/90 mt-1">
+                                Amount Paid: <span className="font-bold text-white">₱{parseFloat(order.amount_paid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                {parseFloat(order.discount || 0) > 0 && (
+                                    <span> • Discount: <span className="font-bold text-white">₱{parseFloat(order.discount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></span>
+                                )}
+                                {order.payments && order.payments.length > 0 && (
+                                    <span>
+                                        {' • Method: '}
+                                        <span className="font-semibold text-white">
+                                            {order.payments[order.payments.length - 1].payment_method || 'Cash'}
+                                        </span>
+                                        {order.payments[order.payments.length - 1].reference_number && (
+                                            <span> (Ref: {order.payments[order.payments.length - 1].reference_number})</span>
+                                        )}
+                                        {order.payments[order.payments.length - 1].payment_date && (
+                                            <span> on {new Date(order.payments[order.payments.length - 1].payment_date).toLocaleDateString()}</span>
+                                        )}
+                                    </span>
+                                )}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 self-start sm:self-auto">
+                        <span className="text-xs font-semibold px-3 py-1.5 bg-emerald-500/20 text-emerald-200 border border-emerald-500/30 rounded-lg">
+                            Balance Due: ₱0.00
+                        </span>
+                    </div>
                 </div>
             )}
 
@@ -1609,13 +1706,85 @@ const JobOrderDetails = () => {
                         </div>
                         {order.actual_cost > 0 && (
                             <div className="flex items-center justify-between pt-4 border-t border-slate-800">
-                                <span className="flex items-center text-emerald-400 text-sm">
-                                    <CurrencyDollarIcon className="h-4 w-4 mr-2" />
+                                <span className="flex items-center text-slate-300 text-sm">
+                                    <CurrencyDollarIcon className="h-4 w-4 mr-2 text-slate-400" />
                                     Actual Cost
                                 </span>
-                                <span className="text-emerald-400 text-sm font-bold">
-                                    ₱{order.actual_cost?.toLocaleString()}
+                                <span className="text-white text-sm font-bold">
+                                    ₱{parseFloat(order.actual_cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
+                            </div>
+                        )}
+
+                        {/* Payment Information */}
+                        <div className="pt-4 border-t border-slate-800 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="flex items-center text-slate-400 text-sm">
+                                    <BanknotesIcon className="h-4 w-4 mr-2" />
+                                    Payment Status
+                                </span>
+                                {order.payment_status === 'paid' ? (
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                        <CheckCircleIcon className="h-3 w-3 mr-1" />
+                                        Paid
+                                    </span>
+                                ) : order.payment_status === 'partial' ? (
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                                        Partial
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-slate-800 text-slate-400 border border-slate-700">
+                                        Unpaid
+                                    </span>
+                                )}
+                            </div>
+
+                            {parseFloat(order.discount || 0) > 0 && (
+                                <div className="flex items-center justify-between text-xs">
+                                    <span className="text-slate-400">Discount Applied</span>
+                                    <span className="text-emerald-400 font-semibold">
+                                        -₱{parseFloat(order.discount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                            )}
+
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-slate-400">Amount Paid</span>
+                                <span className="text-emerald-400 font-bold text-sm">
+                                    ₱{parseFloat(order.amount_paid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                            </div>
+
+                            <div className="flex items-center justify-between text-xs pt-2.5 border-t border-slate-800/80">
+                                <span className="text-slate-400 font-medium">Balance Due</span>
+                                <span className={`font-bold text-sm ${order.payment_status === 'paid' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                    {order.payment_status === 'paid'
+                                        ? '₱0.00 (Settled)'
+                                        : `₱${Math.max(0, (parseFloat(order.actual_cost || 0) - parseFloat(order.discount || 0) - parseFloat(order.amount_paid || 0))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Payment Transactions Breakdown */}
+                        {order.payments && order.payments.length > 0 && (
+                            <div className="pt-4 border-t border-slate-800">
+                                <p className="text-slate-400 text-[11px] font-bold uppercase tracking-wider mb-2.5">
+                                    Payment History
+                                </p>
+                                <div className="space-y-2">
+                                    {order.payments.map((p, idx) => (
+                                        <div key={p.id || idx} className="bg-slate-800/70 p-2.5 rounded-xl border border-slate-700/60 text-xs">
+                                            <div className="flex items-center justify-between font-semibold text-white">
+                                                <span>{p.payment_method || 'Cash'}</span>
+                                                <span className="text-emerald-400">₱{parseFloat(p.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1">
+                                                <span>{p.payment_date ? new Date(p.payment_date).toLocaleDateString() : 'Recorded'}</span>
+                                                {p.reference_number && <span>Ref: {p.reference_number}</span>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>

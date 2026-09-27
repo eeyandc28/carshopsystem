@@ -39,7 +39,7 @@ class JobOrderController extends Controller
 
     public function show(JobOrder $jobOrder)
     {
-        return new JobOrderResource($jobOrder->load(['vehicle.customer', 'serviceAdvisor', 'mechanic']));
+        return new JobOrderResource($jobOrder->load(['vehicle.customer', 'serviceAdvisor', 'mechanic', 'payments']));
     }
 
     public function update(Request $request, JobOrder $jobOrder)
