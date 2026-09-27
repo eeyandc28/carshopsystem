@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Inventory;
 use App\Models\DeliveryItem;
 use App\Models\JobOrderItem;
+use App\Models\Service;
 use App\Http\Resources\V1\InventoryResource;
 use Illuminate\Http\Request;
 
@@ -107,9 +108,9 @@ class InventoryController extends Controller
             ]);
 
         // ── Job Order Items OUT ───────────────────────────────────────────────
-        $jobOrderItems = JobOrderItem::with('jobOrder.vehicle.customer')
+        $directJoItems = JobOrderItem::with('jobOrder.vehicle.customer')
             ->where('inventory_id', $id)
-            ->where('item_type', 'part')
+            ->whereHas('jobOrder', fn($q) => $q->where('status', '!=', 'cancelled'))
             ->when($request->start_date, fn($q) => $q->whereHas('jobOrder', fn($q2) =>
                 $q2->whereDate('created_at', '>=', $request->start_date)
             ))
@@ -121,13 +122,65 @@ class InventoryController extends Controller
                 'id'               => 'JI-' . $ji->id,
                 'transaction_type' => 'OUT',
                 'reference_type'   => 'Job Order',
-                'reference_id'     => $ji->jobOrder->job_order_number ?? $ji->job_order_id,
+                'reference_id'     => $ji->jobOrder->job_order_number ?? ('JO-' . $ji->job_order_id),
                 'reference_label'  => $ji->jobOrder?->vehicle?->customer?->full_name ?? 'Customer',
                 'quantity'         => (int) $ji->quantity,
                 'unit_cost'        => (float) $ji->unit_price,
                 'notes'            => $ji->description ?? null,
                 'created_at'       => $ji->created_at->toDateTimeString(),
             ]);
+
+        // Service Inclusions OUT
+        $servicesWithThisInv = Service::all()->filter(function($srv) use ($inventory) {
+            $incs = is_array($srv->inclusions) ? $srv->inclusions : (json_decode($srv->inclusions, true) ?: []);
+            foreach ($incs as $inc) {
+                if ((isset($inc['inventory_id']) && (int)$inc['inventory_id'] === (int)$inventory->id) ||
+                    (isset($inc['name']) && strtolower(trim($inc['name'])) === strtolower(trim($inventory->name)))) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        $serviceJoItems = collect();
+        if ($servicesWithThisInv->isNotEmpty()) {
+            $serviceNames = $servicesWithThisInv->pluck('name')->map(fn($n) => strtolower(trim($n)))->toArray();
+            $svcItems = JobOrderItem::with('jobOrder.vehicle.customer')
+                ->whereNull('inventory_id')
+                ->whereHas('jobOrder', fn($q) => $q->where('status', '!=', 'cancelled'))
+                ->when($request->start_date, fn($q) => $q->whereHas('jobOrder', fn($q2) =>
+                    $q2->whereDate('created_at', '>=', $request->start_date)
+                ))
+                ->when($request->end_date, fn($q) => $q->whereHas('jobOrder', fn($q2) =>
+                    $q2->whereDate('created_at', '<=', $request->end_date)
+                ))
+                ->get()
+                ->filter(fn($ji) => in_array(strtolower(trim($ji->description)), $serviceNames));
+
+            foreach ($svcItems as $ji) {
+                $srv = $servicesWithThisInv->first(fn($s) => strtolower(trim($s->name)) === strtolower(trim($ji->description)));
+                $incs = is_array($srv->inclusions) ? $srv->inclusions : (json_decode($srv->inclusions, true) ?: []);
+                foreach ($incs as $inc) {
+                    if ((isset($inc['inventory_id']) && (int)$inc['inventory_id'] === (int)$inventory->id) ||
+                        (isset($inc['name']) && strtolower(trim($inc['name'])) === strtolower(trim($inventory->name)))) {
+                        $qty = (int)($inc['quantity'] ?? 1) * (int)$ji->quantity;
+                        $serviceJoItems->push([
+                            'id'               => 'JI-INC-' . $ji->id,
+                            'transaction_type' => 'OUT',
+                            'reference_type'   => 'Job Order',
+                            'reference_id'     => $ji->jobOrder->job_order_number ?? ('JO-' . $ji->job_order_id),
+                            'reference_label'  => $ji->jobOrder?->vehicle?->customer?->full_name ?? 'Customer',
+                            'quantity'         => $qty,
+                            'unit_cost'        => 0.00,
+                            'notes'            => $inventory->name . ' (Included with ' . $ji->description . ')',
+                            'created_at'       => $ji->created_at->toDateTimeString(),
+                        ]);
+                    }
+                }
+            }
+        }
+
+        $jobOrderItems = $directJoItems->concat($serviceJoItems);
 
 
         // ── Merge & sort chronologically ─────────────────────────────────────

@@ -63,34 +63,14 @@ class JobOrderController extends Controller
         // If transitioning to cancelled
         if (isset($validated['status']) && $validated['status'] === 'cancelled' && $jobOrder->status !== 'cancelled') {
             $validated['cancelled_at'] = now();
-            $items = \App\Models\JobOrderItem::where('job_order_id', $jobOrder->id)
-                ->where('item_type', 'part')
-                ->whereNotNull('inventory_id')
-                ->get();
-
-            foreach ($items as $item) {
-                $inv = \App\Models\Inventory::find($item->inventory_id);
-                if ($inv) {
-                    $inv->increment('stock_quantity', (int)$item->quantity);
-                }
-            }
+            self::restoreJobOrderInventoryStock($jobOrder);
         }
 
         // If reopening from cancelled
         if (isset($validated['status']) && $validated['status'] !== 'cancelled' && $jobOrder->status === 'cancelled') {
             $validated['cancelled_at'] = null;
             $validated['cancellation_reason'] = null;
-            $items = \App\Models\JobOrderItem::where('job_order_id', $jobOrder->id)
-                ->where('item_type', 'part')
-                ->whereNotNull('inventory_id')
-                ->get();
-
-            foreach ($items as $item) {
-                $inv = \App\Models\Inventory::find($item->inventory_id);
-                if ($inv) {
-                    $inv->decrement('stock_quantity', (int)$item->quantity);
-                }
-            }
+            self::deductJobOrderInventoryStock($jobOrder);
         }
 
         $jobOrder->update($validated);
@@ -111,17 +91,7 @@ class JobOrderController extends Controller
         }
 
         if ($jobOrder->status !== 'cancelled') {
-            $items = \App\Models\JobOrderItem::where('job_order_id', $jobOrder->id)
-                ->where('item_type', 'part')
-                ->whereNotNull('inventory_id')
-                ->get();
-
-            foreach ($items as $item) {
-                $inv = \App\Models\Inventory::find($item->inventory_id);
-                if ($inv) {
-                    $inv->increment('stock_quantity', (int)$item->quantity);
-                }
-            }
+            self::restoreJobOrderInventoryStock($jobOrder);
         }
 
         $jobOrder->update([
@@ -131,6 +101,72 @@ class JobOrderController extends Controller
         ]);
 
         return new JobOrderResource($jobOrder);
+    }
+
+    protected static function restoreJobOrderInventoryStock($jobOrder)
+    {
+        $items = \App\Models\JobOrderItem::where('job_order_id', $jobOrder->id)->get();
+        foreach ($items as $item) {
+            if ($item->inventory_id) {
+                $inv = \App\Models\Inventory::find($item->inventory_id);
+                if ($inv) {
+                    $inv->increment('stock_quantity', (int)$item->quantity);
+                }
+            }
+
+            // Restore any service inclusions
+            $service = \App\Models\Service::whereRaw('LOWER(name) = ?', [strtolower(trim($item->description))])->first();
+            if ($service && !empty($service->inclusions)) {
+                $incs = is_array($service->inclusions) ? $service->inclusions : (json_decode($service->inclusions, true) ?: []);
+                foreach ($incs as $inc) {
+                    $incInvId = $inc['inventory_id'] ?? null;
+                    if (!$incInvId && !empty($inc['name'])) {
+                        $matchInv = \App\Models\Inventory::whereRaw('LOWER(name) = ?', [strtolower(trim($inc['name']))])->first();
+                        if ($matchInv) $incInvId = $matchInv->id;
+                    }
+                    if ($incInvId) {
+                        $incInv = \App\Models\Inventory::find($incInvId);
+                        if ($incInv) {
+                            $qty = (int)($inc['quantity'] ?? 1) * (int)$item->quantity;
+                            $incInv->increment('stock_quantity', $qty);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    protected static function deductJobOrderInventoryStock($jobOrder)
+    {
+        $items = \App\Models\JobOrderItem::where('job_order_id', $jobOrder->id)->get();
+        foreach ($items as $item) {
+            if ($item->inventory_id) {
+                $inv = \App\Models\Inventory::find($item->inventory_id);
+                if ($inv) {
+                    $inv->decrement('stock_quantity', (int)$item->quantity);
+                }
+            }
+
+            // Deduct any service inclusions
+            $service = \App\Models\Service::whereRaw('LOWER(name) = ?', [strtolower(trim($item->description))])->first();
+            if ($service && !empty($service->inclusions)) {
+                $incs = is_array($service->inclusions) ? $service->inclusions : (json_decode($service->inclusions, true) ?: []);
+                foreach ($incs as $inc) {
+                    $incInvId = $inc['inventory_id'] ?? null;
+                    if (!$incInvId && !empty($inc['name'])) {
+                        $matchInv = \App\Models\Inventory::whereRaw('LOWER(name) = ?', [strtolower(trim($inc['name']))])->first();
+                        if ($matchInv) $incInvId = $matchInv->id;
+                    }
+                    if ($incInvId) {
+                        $incInv = \App\Models\Inventory::find($incInvId);
+                        if ($incInv) {
+                            $qty = (int)($inc['quantity'] ?? 1) * (int)$item->quantity;
+                            $incInv->decrement('stock_quantity', $qty);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     public function destroy(JobOrder $jobOrder)

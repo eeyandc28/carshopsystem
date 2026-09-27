@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\JobOrder;
 use App\Models\JobOrderItem;
 use App\Models\Inventory;
+use App\Models\Service;
 use Illuminate\Http\Request;
 
 class JobOrderItemController extends Controller
@@ -35,6 +36,16 @@ class JobOrderItemController extends Controller
 
         $inventoryId = !empty($validated['inventory_id']) ? (int)$validated['inventory_id'] : null;
 
+        // Auto-match inventory if inventory_id was not explicitly passed
+        if (!$inventoryId) {
+            $invMatch = Inventory::whereRaw('LOWER(name) = ?', [strtolower(trim($validated['description']))])
+                ->orWhereRaw('LOWER(part_number) = ?', [strtolower(trim($validated['description']))])
+                ->first();
+            if ($invMatch) {
+                $inventoryId = $invMatch->id;
+            }
+        }
+
         $item = JobOrderItem::create([
             'job_order_id' => $jobOrderId,
             'inventory_id' => $inventoryId,
@@ -45,11 +56,31 @@ class JobOrderItemController extends Controller
             'total_price' => $totalPrice,
         ]);
 
-        // If it's a part with inventory_id, decrement stock
-        if ($item->item_type === 'part' && $inventoryId) {
+        // Decrement stock for inventory item
+        if ($inventoryId) {
             $inv = Inventory::find($inventoryId);
             if ($inv) {
                 $inv->decrement('stock_quantity', (int)$validated['quantity']);
+            }
+        }
+
+        // If this item is a Service with package inclusions, deduct inventory for those inclusions
+        $service = Service::whereRaw('LOWER(name) = ?', [strtolower(trim($validated['description']))])->first();
+        if ($service && !empty($service->inclusions)) {
+            $inclusions = is_array($service->inclusions) ? $service->inclusions : (json_decode($service->inclusions, true) ?: []);
+            foreach ($inclusions as $inc) {
+                $incInvId = $inc['inventory_id'] ?? null;
+                if (!$incInvId && !empty($inc['name'])) {
+                    $matchInv = Inventory::whereRaw('LOWER(name) = ?', [strtolower(trim($inc['name']))])->first();
+                    if ($matchInv) $incInvId = $matchInv->id;
+                }
+                if ($incInvId) {
+                    $incInv = Inventory::find($incInvId);
+                    if ($incInv) {
+                        $qtyToDeduct = (int)($inc['quantity'] ?? 1) * (int)$validated['quantity'];
+                        $incInv->decrement('stock_quantity', $qtyToDeduct);
+                    }
+                }
             }
         }
 
@@ -70,11 +101,31 @@ class JobOrderItemController extends Controller
         $item = JobOrderItem::findOrFail($itemId);
         $jobOrderId = $item->job_order_id;
 
-        // If it's a part, restore stock
-        if ($item->item_type === 'part' && $item->inventory_id) {
+        // If it has inventory_id, restore stock
+        if ($item->inventory_id) {
             $inv = Inventory::find($item->inventory_id);
             if ($inv) {
                 $inv->increment('stock_quantity', (int)$item->quantity);
+            }
+        }
+
+        // Restore stock if it was a service with package inclusions
+        $service = Service::whereRaw('LOWER(name) = ?', [strtolower(trim($item->description))])->first();
+        if ($service && !empty($service->inclusions)) {
+            $inclusions = is_array($service->inclusions) ? $service->inclusions : (json_decode($service->inclusions, true) ?: []);
+            foreach ($inclusions as $inc) {
+                $incInvId = $inc['inventory_id'] ?? null;
+                if (!$incInvId && !empty($inc['name'])) {
+                    $matchInv = Inventory::whereRaw('LOWER(name) = ?', [strtolower(trim($inc['name']))])->first();
+                    if ($matchInv) $incInvId = $matchInv->id;
+                }
+                if ($incInvId) {
+                    $incInv = Inventory::find($incInvId);
+                    if ($incInv) {
+                        $qtyToRestore = (int)($inc['quantity'] ?? 1) * (int)$item->quantity;
+                        $incInv->increment('stock_quantity', $qtyToRestore);
+                    }
+                }
             }
         }
 
