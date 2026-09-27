@@ -491,8 +491,6 @@ const JobOrderDetails = () => {
             <div class="invoice-header">
                 <div>
                     <img src="/logo.png" class="brand-logo" alt="RADI8" />
-                    <h1 class="brand-title">RADI8</h1>
-                    <p class="brand-sub">Precision. Reliability. Service.</p>
                 </div>
                 <div class="doc-meta">
                     <div class="doc-badge" style="color: #0f172a;">INVOICE</div>
@@ -578,8 +576,6 @@ const JobOrderDetails = () => {
             <div class="invoice-header">
                 <div>
                     <img src="/logo.png" class="brand-logo" alt="RADI8" />
-                    <h1 class="brand-title">RADI8</h1>
-                    <p class="brand-sub">Precision. Reliability. Service.</p>
                 </div>
                 <div class="doc-meta">
                     <div class="doc-badge" style="color: #d97706;">TEMPORARY INVOICE</div>
@@ -666,8 +662,6 @@ const JobOrderDetails = () => {
             <div class="invoice-header">
                 <div>
                     <img src="/logo.png" class="brand-logo" alt="RADI8" />
-                    <h1 class="brand-title">RADI8</h1>
-                    <p class="brand-sub">Precision. Reliability. Service.</p>
                 </div>
                 <div class="doc-meta">
                     <div class="doc-badge" style="color: #2563eb;">SERVICE INVOICE</div>
@@ -755,8 +749,6 @@ const JobOrderDetails = () => {
             <div class="invoice-header" style="border-bottom: 2px solid #fecaca; background: #fff5f5; padding: 12px; border-radius: 8px;">
                 <div>
                     <img src="/logo.png" class="brand-logo" alt="RADI8" />
-                    <h1 class="brand-title" style="color: #991b1b;">RADI8</h1>
-                    <p class="brand-sub">Precision. Reliability. Service.</p>
                 </div>
                 <div class="doc-meta">
                     <div class="doc-badge" style="color: #dc2626;">CANCELLED INVOICE</div>
