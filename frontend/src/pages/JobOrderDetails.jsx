@@ -22,7 +22,8 @@ import {
     MagnifyingGlassIcon,
     SparklesIcon,
     CheckCircleIcon,
-    BanknotesIcon
+    BanknotesIcon,
+    LockClosedIcon
 } from '@heroicons/react/24/outline';
 
 const statusSteps = [
@@ -63,6 +64,7 @@ const JobOrderDetails = () => {
     const [selectedServiceInclusions, setSelectedServiceInclusions] = useState([]);
     const [includePackageItems, setIncludePackageItems] = useState(true);
     const descDropdownRef = useRef(null);
+    const isOrderPaid = order?.payment_status === 'paid';
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -188,6 +190,10 @@ const JobOrderDetails = () => {
 
     const addItem = async (e) => {
         if (e && e.preventDefault) e.preventDefault();
+        if (isOrderPaid) {
+            alert('Cannot add items to a paid job order.');
+            return;
+        }
         if (updating || !newItem.description) return;
         setUpdating(true);
         try {
@@ -229,6 +235,10 @@ const JobOrderDetails = () => {
     };
 
     const deleteItem = (item) => {
+        if (isOrderPaid) {
+            alert('Cannot remove items from a paid job order.');
+            return;
+        }
         setItemToDelete(item);
     };
 
@@ -1317,14 +1327,23 @@ const JobOrderDetails = () => {
                                                         )}
                                                     </td>
                                                     <td className="px-4 py-3 text-right">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => deleteItem(item)}
-                                                            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all cursor-pointer"
-                                                            title="Remove item"
-                                                        >
-                                                            <TrashIcon className="h-4 w-4" />
-                                                        </button>
+                                                        {!isOrderPaid ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => deleteItem(item)}
+                                                                className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all cursor-pointer"
+                                                                title="Remove item"
+                                                            >
+                                                                <TrashIcon className="h-4 w-4" />
+                                                            </button>
+                                                        ) : (
+                                                            <span
+                                                                className="p-1.5 text-slate-600 inline-block cursor-not-allowed"
+                                                                title="Items cannot be removed once the job order is paid"
+                                                            >
+                                                                <LockClosedIcon className="h-4 w-4" />
+                                                            </span>
+                                                        )}
                                                     </td>
                                                 </tr>
 
@@ -1354,7 +1373,8 @@ const JobOrderDetails = () => {
                                     })}
 
                                     {/* Inline Add Item Row */}
-                                    <tr className="bg-slate-800/30">
+                                    {!isOrderPaid ? (
+                                        <tr className="bg-slate-800/30">
                                         <td className="px-4 py-3">
                                             <select
                                                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
@@ -1632,6 +1652,16 @@ const JobOrderDetails = () => {
                                             </button>
                                         </td>
                                     </tr>
+                                    ) : (
+                                        <tr className="bg-slate-900/40 border-t border-slate-800/60">
+                                            <td colSpan="6" className="px-4 py-3 text-center">
+                                                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+                                                    <LockClosedIcon className="h-3.5 w-3.5" />
+                                                    <span>Job Order is fully paid. Items cannot be added or removed.</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>

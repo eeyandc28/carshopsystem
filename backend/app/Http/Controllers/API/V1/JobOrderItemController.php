@@ -24,6 +24,13 @@ class JobOrderItemController extends Controller
 
     public function store(Request $request, $jobOrderId)
     {
+        $jobOrder = JobOrder::findOrFail($jobOrderId);
+        if ($jobOrder->payment_status === 'paid') {
+            return response()->json([
+                'message' => 'Cannot add items to a paid job order.'
+            ], 422);
+        }
+
         $validated = $request->validate([
             'item_type' => 'required|string',
             'description' => 'required|string',
@@ -100,6 +107,13 @@ class JobOrderItemController extends Controller
     {
         $item = JobOrderItem::findOrFail($itemId);
         $jobOrderId = $item->job_order_id;
+        $jobOrder = JobOrder::findOrFail($jobOrderId);
+
+        if ($jobOrder->payment_status === 'paid') {
+            return response()->json([
+                'message' => 'Cannot remove items from a paid job order.'
+            ], 422);
+        }
 
         // 1. If it has direct inventory_id, restore stock
         if ($item->inventory_id) {
