@@ -23,11 +23,13 @@ class Inventory extends Model
         'reorder_level',
         'unit_price',
         'markup_rate',
+        'inclusions',
     ];
 
     protected $casts = [
         'unit_price'  => 'decimal:2',
         'markup_rate' => 'decimal:2',
+        'inclusions'  => 'array',
     ];
 
     protected $appends = [

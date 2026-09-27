@@ -133,7 +133,20 @@ const JobOrderDetails = () => {
                 ? parseFloat(item.selling_price)
                 : Number((cost * (1 + markup / 100)).toFixed(2));
 
-            setSelectedServiceInclusions([]);
+            let incs = [];
+            if (Array.isArray(item.inclusions)) {
+                incs = item.inclusions;
+            } else if (typeof item.inclusions === 'string') {
+                try {
+                    incs = JSON.parse(item.inclusions);
+                } catch {
+                    incs = [];
+                }
+            }
+
+            setSelectedServiceInclusions(incs);
+            setIncludePackageItems(incs.length > 0);
+
             setNewItem(prev => ({
                 ...prev,
                 inventory_id: item.id,
@@ -281,20 +294,40 @@ const JobOrderDetails = () => {
         return price === 0 || desc.includes('(included') || desc.includes('[included]');
     };
 
-    // Helper to get inclusions for a service line item
+    // Helper to get inclusions for a service or inventory package line item
     const getServiceInclusionsForItem = (item) => {
         if (!item || !item.description || isItemInclusion(item)) return [];
-        const match = (servicesList || []).find(
+
+        let matchInclusions = null;
+
+        // 1. Check services
+        const sMatch = (servicesList || []).find(
             s => s.name?.toLowerCase().trim() === item.description?.toLowerCase().trim()
         );
-        if (!match || !match.inclusions) return [];
+        if (sMatch && sMatch.inclusions) {
+            matchInclusions = sMatch.inclusions;
+        }
+
+        // 2. Check inventory
+        if (!matchInclusions) {
+            const iMatch = (inventory || []).find(
+                inv => (item.inventory_id && String(inv.id) === String(item.inventory_id)) ||
+                       inv.name?.toLowerCase().trim() === item.description?.toLowerCase().trim() ||
+                       (inv.part_number && inv.part_number.toLowerCase().trim() === item.description?.toLowerCase().trim())
+            );
+            if (iMatch && iMatch.inclusions) {
+                matchInclusions = iMatch.inclusions;
+            }
+        }
+
+        if (!matchInclusions) return [];
 
         let incs = [];
-        if (Array.isArray(match.inclusions)) {
-            incs = match.inclusions;
-        } else if (typeof match.inclusions === 'string') {
+        if (Array.isArray(matchInclusions)) {
+            incs = matchInclusions;
+        } else if (typeof matchInclusions === 'string') {
             try {
-                incs = JSON.parse(match.inclusions);
+                incs = JSON.parse(matchInclusions);
             } catch {
                 incs = [];
             }

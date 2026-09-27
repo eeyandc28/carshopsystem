@@ -30,6 +30,7 @@ class InventoryController extends Controller
             'reorder_level'  => 'required|integer|min:0',
             'unit_price'     => 'required|numeric|min:0',
             'markup_rate'    => 'nullable|numeric|min:0',
+            'inclusions'     => 'nullable|array',
         ]);
 
         $inventory = Inventory::create($validated);
@@ -55,6 +56,7 @@ class InventoryController extends Controller
             'reorder_level'  => 'sometimes|required|integer|min:0',
             'unit_price'     => 'sometimes|required|numeric|min:0',
             'markup_rate'    => 'nullable|numeric|min:0',
+            'inclusions'     => 'nullable|array',
         ]);
 
         $inventory->update($validated);

@@ -28,6 +28,7 @@ class InventoryResource extends JsonResource
             'unit_price'     => (float) $this->unit_price,
             'markup_rate'    => (float) ($this->markup_rate ?? 0),
             'selling_price'  => (float) $this->selling_price,
+            'inclusions'     => is_array($this->inclusions) ? $this->inclusions : (json_decode($this->inclusions ?? '[]', true) ?: []),
             'supplier'       => $this->whenLoaded('supplier'),
             'created_at'     => $this->created_at,
             'updated_at'     => $this->updated_at,
