@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { buildInvoiceHtml, printInvoice, fmtMoney, esc } from '../utils/invoiceTemplate';
 import {
     ArrowLeftIcon,
     ClipboardDocumentListIcon,
@@ -366,674 +367,152 @@ const JobOrderDetails = () => {
         });
     };
 
-    const printHtmlInvoice = (title, contentHtml) => {
-        let iframe = document.getElementById('carshop-print-iframe');
-        if (!iframe) {
-            iframe = document.createElement('iframe');
-            iframe.id = 'carshop-print-iframe';
-            iframe.style.position = 'fixed';
-            iframe.style.right = '0';
-            iframe.style.bottom = '0';
-            iframe.style.width = '0';
-            iframe.style.height = '0';
-            iframe.style.border = '0';
-            document.body.appendChild(iframe);
-        }
-
-        const doc = iframe.contentWindow.document;
-        doc.open();
-        doc.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <title>${title}</title>
-                <style>
-                    @page {
-                        size: A4 portrait;
-                        margin: 12mm 15mm;
-                    }
-                    * {
-                        box-sizing: border-box;
-                    }
-                    body {
-                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                        color: #1e293b;
-                        margin: 0;
-                        padding: 0;
-                        font-size: 12px;
-                        line-height: 1.4;
-                        background: #fff;
-                    }
-                    .invoice-header {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: flex-start;
-                        border-bottom: 2px solid #e2e8f0;
-                        padding-bottom: 12px;
-                        margin-bottom: 16px;
-                    }
-                    .brand-logo {
-                        max-height: 42px;
-                        width: auto;
-                        object-fit: contain;
-                        margin-bottom: 4px;
-                    }
-                    .brand-title {
-                        font-size: 20px;
-                        font-weight: 800;
-                        color: #0f172a;
-                        margin: 0 0 4px 0;
-                    }
-                    .brand-sub {
-                        font-size: 10px;
-                        color: #64748b;
-                        margin: 0;
-                    }
-                    .doc-meta {
-                        text-align: right;
-                    }
-                    .doc-badge {
-                        font-size: 16px;
-                        font-weight: 800;
-                        margin: 0 0 4px 0;
-                    }
-                    .doc-number {
-                        font-size: 11px;
-                        color: #475569;
-                        margin: 2px 0;
-                    }
-                    .info-grid {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        gap: 16px;
-                        margin-bottom: 16px;
-                    }
-                    .info-card {
-                        background: #f8fafc;
-                        border: 1px solid #e2e8f0;
-                        border-radius: 8px;
-                        padding: 10px 14px;
-                    }
-                    .info-card h4 {
-                        margin: 0 0 6px 0;
-                        font-size: 10px;
-                        text-transform: uppercase;
-                        letter-spacing: 0.5px;
-                        color: #475569;
-                        border-bottom: 1px solid #cbd5e1;
-                        padding-bottom: 4px;
-                    }
-                    .info-card p {
-                        margin: 3px 0;
-                        font-size: 11px;
-                        color: #334155;
-                    }
-                    .banner-box {
-                        padding: 8px 12px;
-                        border-radius: 8px;
-                        margin-bottom: 16px;
-                        font-size: 11px;
-                    }
-                    .items-table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-bottom: 16px;
-                    }
-                    .items-table th {
-                        background: #1e293b;
-                        color: #ffffff;
-                        text-align: left;
-                        padding: 8px 10px;
-                        font-size: 10px;
-                        text-transform: uppercase;
-                        letter-spacing: 0.5px;
-                    }
-                    .items-table td {
-                        padding: 8px 10px;
-                        border-bottom: 1px solid #e2e8f0;
-                        font-size: 11px;
-                    }
-                    .items-table tr:nth-child(even) td {
-                        background: #f8fafc;
-                    }
-                    .text-right { text-align: right; }
-                    .text-center { text-align: center; }
-                    .totals-box {
-                        margin-left: auto;
-                        width: 280px;
-                        background: #f8fafc;
-                        border: 1px solid #e2e8f0;
-                        border-radius: 8px;
-                        padding: 10px 14px;
-                        margin-bottom: 20px;
-                    }
-                    .total-line {
-                        display: flex;
-                        justify-content: space-between;
-                        margin-bottom: 4px;
-                        font-size: 11px;
-                    }
-                    .grand-total {
-                        font-size: 14px;
-                        font-weight: 800;
-                        color: #0f172a;
-                        border-top: 1px solid #cbd5e1;
-                        padding-top: 6px;
-                        margin-top: 6px;
-                    }
-                    .signatures {
-                        display: flex;
-                        justify-content: space-between;
-                        margin-top: 30px;
-                        margin-bottom: 20px;
-                    }
-                    .signature-box {
-                        width: 200px;
-                        text-align: center;
-                        border-top: 1px solid #94a3b8;
-                        padding-top: 6px;
-                        font-size: 10px;
-                        color: #64748b;
-                    }
-                    .footer-text {
-                        text-align: center;
-                        font-size: 9px;
-                        color: #94a3b8;
-                        border-top: 1px dashed #cbd5e1;
-                        padding-top: 10px;
-                        margin-top: 16px;
-                    }
-                    @media print {
-                        body {
-                            -webkit-print-color-adjust: exact;
-                            print-color-adjust: exact;
-                        }
-                    }
-                </style>
-            </head>
-            <body>
-                ${contentHtml}
-            </body>
-            </html>
-        `);
-        doc.close();
-
-        setTimeout(() => {
-            iframe.contentWindow.focus();
-            iframe.contentWindow.print();
-        }, 200);
+    // ---- Invoice printing (all formats share the standard SERVICE INVOICE layout) ----
+    const buildInvoiceLines = () => {
+        const lines = [];
+        orderItems.forEach((item) => {
+            const included = isItemInclusion(item);
+            lines.push({
+                description: item.description || 'N/A',
+                quantity: item.quantity || 1,
+                unitPrice: item.unit_price || 0,
+                amount: item.total_price || (item.quantity * item.unit_price) || 0,
+                included
+            });
+            getServiceInclusionsForItem(item).forEach((inc) => {
+                lines.push({ description: inc.name, quantity: inc.quantity || 1, included: true, child: true });
+            });
+        });
+        return lines;
     };
 
+    const getBillableTotal = () => orderItems.reduce((sum, item) => {
+        if (isItemInclusion(item)) return sum;
+        return sum + parseFloat(item.total_price || (item.quantity * item.unit_price) || 0);
+    }, 0);
+
+    const getInvoiceBase = () => ({
+        date: new Date().toLocaleDateString(),
+        poNo: order.order_number,
+        customer: {
+            name: order.customer?.full_name || 'Walk-in Customer',
+            tin: order.customer?.tin || '',
+            address: order.customer?.address || ''
+        },
+        vehicle: {
+            label: `${order.vehicle?.brand || ''} ${order.vehicle?.model || ''}${order.vehicle?.year ? ` (${order.vehicle.year})` : ''}`.trim(),
+            plate: order.vehicle?.plate_number || ''
+        },
+        lines: buildInvoiceLines()
+    });
+
     const generateInvoice = () => {
-        const now = new Date().toLocaleDateString();
         const invNum = `INV-${(order.order_number || '').split('-')[1] || order.order_number}`;
-        const calculatedItemsTotal = orderItems.reduce((sum, item) => {
-            if (isItemInclusion(item)) return sum;
-            return sum + parseFloat(item.total_price || (item.quantity * item.unit_price) || 0);
-        }, 0);
-        const finalTotal = calculatedItemsTotal;
+        const finalTotal = getBillableTotal();
         const isPaid = order.payment_status === 'paid';
         const discountAmount = parseFloat(order.discount || 0);
         const paidAmount = parseFloat(order.amount_paid || 0);
         const netTotal = Math.max(0, finalTotal - discountAmount);
         const balanceDue = isPaid ? 0 : Math.max(0, netTotal - paidAmount);
+        const payment = order.payments && order.payments.length > 0 ? order.payments[0] : null;
+        const receivedAmt = isPaid ? (paidAmount > 0 ? paidAmount : netTotal) : paidAmount;
 
-        let rowCount = 0;
-        const rows = orderItems.length > 0 ? orderItems.map((item) => {
-            const isIncluded = isItemInclusion(item);
-            if (!isIncluded) rowCount++;
-            const itemRow = `
-            <tr>
-                <td class="text-center">${isIncluded ? '↳' : rowCount}</td>
-                <td>
-                    <strong>${item.description || 'N/A'}</strong>
-                    ${isIncluded ? ' <span style="display: inline-block; font-size: 8.5px; font-weight: 700; color: #047857; background: #d1fae5; border: 1px solid #6ee7b7; padding: 0.5px 5px; border-radius: 9999px; margin-left: 6px;">INCLUDED</span>' : ''}
-                </td>
-                <td class="text-center">${parseFloat(item.quantity || 1).toFixed(2)}</td>
-                <td class="text-right">${isIncluded ? '<span style="color: #047857; font-weight: 600;">INCLUDED</span>' : `Php ${parseFloat(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
-                <td class="text-right font-bold">${isIncluded ? '<span style="color: #047857; font-weight: 600;">Php 0.00</span>' : `Php ${parseFloat(item.total_price || (item.quantity * item.unit_price) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
-            </tr>
-            `;
+        let notesHtml = '';
+        if (isPaid) {
+            notesHtml = `<strong>&#10003; PAYMENT COMPLETED &amp; SETTLED</strong> &mdash; ${payment
+                ? `Method: ${esc(payment.payment_method || 'Cash')}${payment.reference_number ? ` | Ref: ${esc(payment.reference_number)}` : ''} | Date: ${new Date(payment.payment_date || payment.created_at).toLocaleDateString()}`
+                : 'Payment officially received and recorded in system.'}`;
+        } else if (paidAmount > 0) {
+            notesHtml = `<strong>PARTIAL PAYMENT:</strong> Amount Paid: Php ${fmtMoney(paidAmount)} | <strong>Balance Due: Php ${fmtMoney(balanceDue)}</strong>`;
+        }
 
-            const catalogInclusions = getServiceInclusionsForItem(item);
-            const inclusionRows = catalogInclusions.map((inc) => `
-            <tr style="background: #f8fafc;">
-                <td class="text-center" style="color: #94a3b8; font-size: 10px;">↳</td>
-                <td style="padding-left: 20px;">
-                    <span style="color: #334155; font-weight: 500;">${inc.name}</span>
-                    <span style="display: inline-block; font-size: 8.5px; font-weight: 700; color: #047857; background: #d1fae5; border: 1px solid #6ee7b7; padding: 0.5px 5px; border-radius: 9999px; margin-left: 6px;">INCLUDED</span>
-                </td>
-                <td class="text-center" style="color: #64748b;">${parseFloat(inc.quantity || 1).toFixed(2)}</td>
-                <td class="text-right" style="color: #047857; font-weight: 600; font-size: 10px;">INCLUDED</td>
-                <td class="text-right font-bold" style="color: #047857; font-size: 10px;">Php 0.00</td>
-            </tr>
-            `).join('');
+        const html = buildInvoiceHtml({
+            ...getInvoiceBase(),
+            titleTop: 'SERVICE',
+            titleMain: 'INVOICE',
+            siNo: invNum,
+            saleType: isPaid ? 'cash' : 'charge',
+            terms: isPaid ? `Paid${payment?.payment_method ? ` - ${payment.payment_method}` : ''}` : (paidAmount > 0 ? 'Partial Payment' : 'Charge / Unpaid'),
+            totals: { totalSales: finalTotal, discount: discountAmount, totalDue: netTotal },
+            receivedAmount: receivedAmt > 0 ? `Php ${fmtMoney(receivedAmt)}` : '',
+            notesHtml,
+            stamp: isPaid ? { text: 'PAID', color: '#059669' } : null,
+            footerNote: 'Thank you for your business! Please keep this invoice for your warranty records.'
+        });
 
-            return itemRow + inclusionRows;
-        }).join('') : `<tr><td colspan="5" class="text-center">No parts or services recorded.</td></tr>`;
-
-        const html = `
-            <div class="invoice-header">
-                <div>
-                    <img src="/logo.png" class="brand-logo" alt="RADI8" />
-                </div>
-                <div class="doc-meta">
-                    <div class="doc-badge" style="color: ${isPaid ? '#059669' : '#0f172a'};">
-                        INVOICE ${isPaid ? '<span style="background: #d1fae5; color: #047857; border: 1px solid #6ee7b7; font-size: 11px; padding: 2px 8px; border-radius: 9999px; margin-left: 6px;">PAID</span>' : ''}
-                    </div>
-                    <div class="doc-number"><strong>Invoice #:</strong> ${invNum}</div>
-                    <div class="doc-number"><strong>Date:</strong> ${now}</div>
-                    <div class="doc-number"><strong>Order #:</strong> ${order.order_number}</div>
-                    <div class="doc-number"><strong>Payment Status:</strong> <span style="font-weight: 700; color: ${isPaid ? '#047857' : '#64748b'};">${(order.payment_status || 'unpaid').toUpperCase()}</span></div>
-                </div>
-            </div>
-
-            <div class="info-grid">
-                <div class="info-card">
-                    <h4>Customer Details</h4>
-                    <p><strong>Name:</strong> ${order.customer?.full_name || 'Walk-in Customer'}</p>
-                    <p><strong>Contact:</strong> ${order.customer?.contact_number || 'N/A'}</p>
-                    <p><strong>Address:</strong> ${order.customer?.address || 'N/A'}</p>
-                </div>
-                <div class="info-card">
-                    <h4>Vehicle Details</h4>
-                    <p><strong>Plate No:</strong> ${order.vehicle?.plate_number || 'N/A'}</p>
-                    <p><strong>Unit:</strong> ${order.vehicle?.brand || ''} ${order.vehicle?.model || ''} (${order.vehicle?.year || 'N/A'})</p>
-                    <p><strong>VIN:</strong> ${order.vehicle?.vin || 'N/A'}</p>
-                </div>
-            </div>
-
-            <table class="items-table">
-                <thead>
-                    <tr>
-                        <th style="width: 30px;" class="text-center">#</th>
-                        <th>Description</th>
-                        <th style="width: 50px;" class="text-center">Qty</th>
-                        <th style="width: 100px;" class="text-right">Unit Price</th>
-                        <th style="width: 110px;" class="text-right">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${rows}
-                </tbody>
-            </table>
-
-            <div class="totals-box">
-                <div class="total-line">
-                    <span>Subtotal:</span>
-                    <span>Php ${finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                ${discountAmount > 0 ? `
-                <div class="total-line" style="color: #047857;">
-                    <span>Discount:</span>
-                    <span>- Php ${discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>` : ''}
-                <div class="total-line grand-total">
-                    <span>${isPaid ? 'TOTAL INVOICE:' : 'TOTAL DUE:'}</span>
-                    <span style="color: #2563eb;">Php ${netTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                ${(isPaid || paidAmount > 0) ? `
-                <div class="total-line" style="color: #047857; font-weight: 600; margin-top: 4px; border-top: 1px dashed #cbd5e1; padding-top: 4px;">
-                    <span>Amount Paid:</span>
-                    <span>Php ${(isPaid ? (paidAmount > 0 ? paidAmount : netTotal) : paidAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div class="total-line" style="color: ${isPaid ? '#047857' : '#dc2626'}; font-weight: 800; font-size: 13px;">
-                    <span>BALANCE DUE:</span>
-                    <span>${isPaid ? 'Php 0.00 [PAID IN FULL]' : `Php ${balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</span>
-                </div>` : ''}
-            </div>
-
-            ${isPaid ? `
-            <div style="margin: 16px 0; padding: 10px 14px; background: #ecfdf5; border: 1.5px solid #10b981; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <div style="font-weight: 800; color: #065f46; font-size: 11px; letter-spacing: 0.5px;">✓ PAYMENT COMPLETED & SETTLED</div>
-                    <div style="font-size: 10px; color: #047857; margin-top: 2px;">
-                        ${(order.payments && order.payments.length > 0) ? `Method: ${order.payments[0].payment_method || 'Cash'} ${order.payments[0].reference_number ? `| Ref: ${order.payments[0].reference_number}` : ''} | Date: ${new Date(order.payments[0].payment_date || order.payments[0].created_at).toLocaleDateString()}` : 'Payment officially received and recorded in system.'}
-                    </div>
-                </div>
-                <div style="font-weight: 900; color: #047857; font-size: 15px; border: 2px solid #047857; padding: 2px 10px; border-radius: 4px; letter-spacing: 1px;">
-                    PAID
-                </div>
-            </div>
-            ` : ''}
-
-            <div class="signatures">
-                <div class="signature-box">Service Advisor Signature</div>
-                <div class="signature-box">Customer Conforme / Signature</div>
-            </div>
-
-            <div class="footer-text">
-                Thank you for your business! Please keep this invoice for your warranty records.<br>
-                RADI8 System Generated Document
-            </div>
-        `;
-
-        printHtmlInvoice(`Invoice_${order.order_number}`, html);
+        printInvoice(`Invoice_${order.order_number}`, html);
     };
 
     const printTemporaryInvoice = () => {
-        const now = new Date().toLocaleDateString();
         const tempInvNum = `TINV-${(order.order_number || '').replace(/^JO-/, '')}`;
-        const calculatedItemsTotal = orderItems.reduce((sum, item) => {
-            if (isItemInclusion(item)) return sum;
-            return sum + parseFloat(item.total_price || (item.quantity * item.unit_price) || 0);
-        }, 0);
-        const finalTotal = calculatedItemsTotal;
+        const finalTotal = getBillableTotal();
 
-        let tempRowCount = 0;
-        const rows = orderItems.length > 0 ? orderItems.map((item) => {
-            const isIncluded = isItemInclusion(item);
-            if (!isIncluded) tempRowCount++;
-            const itemRow = `
-            <tr>
-                <td class="text-center">${isIncluded ? '↳' : tempRowCount}</td>
-                <td>
-                    <strong>${item.description || 'N/A'}</strong>
-                    ${isIncluded ? ' <span style="display: inline-block; font-size: 8.5px; font-weight: 700; color: #047857; background: #d1fae5; border: 1px solid #6ee7b7; padding: 0.5px 5px; border-radius: 9999px; margin-left: 6px;">INCLUDED</span>' : ''}
-                </td>
-                <td class="text-center">${(item.item_type || 'part').toUpperCase()}</td>
-                <td class="text-center">${parseFloat(item.quantity || 1).toFixed(2)}</td>
-                <td class="text-right">${isIncluded ? '<span style="color: #047857; font-weight: 600;">INCLUDED</span>' : `Php ${parseFloat(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
-                <td class="text-right font-bold">${isIncluded ? '<span style="color: #047857; font-weight: 600;">Php 0.00</span>' : `Php ${parseFloat(item.total_price || (item.quantity * item.unit_price) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
-            </tr>
-            `;
+        const html = buildInvoiceHtml({
+            ...getInvoiceBase(),
+            titleTop: 'TEMPORARY',
+            titleMain: 'INVOICE',
+            subtitle: '[ DRAFT / ESTIMATE BILLING ]',
+            siNo: tempInvNum,
+            saleType: null,
+            terms: 'Estimate / For Review',
+            totals: { totalSales: finalTotal, totalDue: finalTotal },
+            notesHtml: `<strong>NOTICE:</strong> This is a Temporary Invoice for estimation and billing review. Amounts may vary upon final vehicle release. Not an official receipt. | Status: <strong>${esc((order.status || 'pending').toUpperCase())}</strong> | Prepared by: ${esc(order.advisor?.name || 'Service Advisor')}`,
+            watermark: { text: 'DRAFT', color: '#d97706' },
+            footerNote: 'Temporary Invoice - Not valid as an official receipt.'
+        });
 
-            const catalogInclusions = getServiceInclusionsForItem(item);
-            const inclusionRows = catalogInclusions.map((inc) => `
-            <tr style="background: #f8fafc;">
-                <td class="text-center" style="color: #94a3b8; font-size: 10px;">↳</td>
-                <td style="padding-left: 20px;">
-                    <span style="color: #334155; font-weight: 500;">${inc.name}</span>
-                    <span style="display: inline-block; font-size: 8.5px; font-weight: 700; color: #047857; background: #d1fae5; border: 1px solid #6ee7b7; padding: 0.5px 5px; border-radius: 9999px; margin-left: 6px;">INCLUDED</span>
-                </td>
-                <td class="text-center">${(inc.item_type || 'part').toUpperCase()}</td>
-                <td class="text-center" style="color: #64748b;">${parseFloat(inc.quantity || 1).toFixed(2)}</td>
-                <td class="text-right" style="color: #047857; font-weight: 600; font-size: 10px;">INCLUDED</td>
-                <td class="text-right font-bold" style="color: #047857; font-size: 10px;">Php 0.00</td>
-            </tr>
-            `).join('');
-
-            return itemRow + inclusionRows;
-        }).join('') : `<tr><td colspan="6" class="text-center">No parts or services recorded.</td></tr>`;
-
-        const html = `
-            <div class="invoice-header">
-                <div>
-                    <img src="/logo.png" class="brand-logo" alt="RADI8" />
-                </div>
-                <div class="doc-meta">
-                    <div class="doc-badge" style="color: #d97706;">TEMPORARY INVOICE</div>
-                    <div style="font-size: 9px; font-weight: bold; color: #b45309; margin-bottom: 4px;">[ DRAFT / ESTIMATE BILLING ]</div>
-                    <div class="doc-number"><strong>Temp Inv #:</strong> ${tempInvNum}</div>
-                    <div class="doc-number"><strong>Date:</strong> ${now}</div>
-                    <div class="doc-number"><strong>JO #:</strong> ${order.order_number}</div>
-                </div>
-            </div>
-
-            <div class="info-grid">
-                <div class="info-card">
-                    <h4>Bill To / Customer</h4>
-                    <p><strong>Name:</strong> ${order.customer?.full_name || 'Walk-in Customer'}</p>
-                    <p><strong>Contact:</strong> ${order.customer?.contact_number || 'N/A'}</p>
-                    <p><strong>Address:</strong> ${order.customer?.address || 'N/A'}</p>
-                </div>
-                <div class="info-card">
-                    <h4>Vehicle Information</h4>
-                    <p><strong>Plate No:</strong> ${order.vehicle?.plate_number || 'N/A'}</p>
-                    <p><strong>Model:</strong> ${order.vehicle?.brand || ''} ${order.vehicle?.model || ''} (${order.vehicle?.year || 'N/A'})</p>
-                    <p><strong>VIN:</strong> ${order.vehicle?.vin || 'N/A'}</p>
-                </div>
-            </div>
-
-            <table class="items-table">
-                <thead>
-                    <tr>
-                        <th style="width: 30px;" class="text-center">#</th>
-                        <th>Item / Service Description</th>
-                        <th style="width: 70px;" class="text-center">Type</th>
-                        <th style="width: 50px;" class="text-center">Qty</th>
-                        <th style="width: 100px;" class="text-right">Unit Price</th>
-                        <th style="width: 110px;" class="text-right">Total Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${rows}
-                </tbody>
-            </table>
-
-            <div class="totals-box">
-                <div class="total-line">
-                    <span>Status:</span>
-                    <span style="font-weight: bold;">${(order.status || 'PENDING').toUpperCase()}</span>
-                </div>
-                <div class="total-line grand-total">
-                    <span style="color: #d97706;">TOTAL DUE:</span>
-                    <span style="color: #d97706;">Php ${finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-            </div>
-
-            <div class="signatures">
-                <div class="signature-box">Prepared by: ${order.advisor?.name || 'Service Advisor'}</div>
-                <div class="signature-box">Customer Conforme / Signature</div>
-            </div>
-
-            <div class="footer-text">
-                * NOTICE: This is a Temporary Invoice for estimation and billing review. Amounts may vary upon final vehicle release. Not an official receipt.<br>
-                RADI8 System Generated Document
-            </div>
-        `;
-
-        printHtmlInvoice(`Temporary_Invoice_${order.order_number}`, html);
+        printInvoice(`Temporary_Invoice_${order.order_number}`, html);
     };
 
     const printServiceInvoice = () => {
-        const now = new Date().toLocaleDateString();
         const srvInvNum = `SRV-${(order.order_number || '').replace(/^JO-/, '')}`;
         const partsCount = orderItems.filter(i => (i.item_type || 'part') === 'part').length;
         const laborCount = orderItems.filter(i => (i.item_type || 'part') !== 'part').length;
 
-        let rowIdx = 0;
-        const rows = orderItems.length > 0 ? orderItems.map((item) => {
-            const isIncluded = isItemInclusion(item);
-            if (!isIncluded) rowIdx++;
-            const itemRow = `
-            <tr>
-                <td class="text-center">${isIncluded ? '↳' : rowIdx}</td>
-                <td>
-                    <strong>${item.description || 'N/A'}</strong>
-                    ${isIncluded ? ' <span style="display: inline-block; font-size: 8.5px; font-weight: 700; color: #047857; background: #d1fae5; border: 1px solid #6ee7b7; padding: 0.5px 5px; border-radius: 9999px; margin-left: 6px;">INCLUDED</span>' : ''}
-                </td>
-                <td class="text-center">${(item.item_type || 'part').toUpperCase()}</td>
-                <td class="text-center">${item.quantity}</td>
-                <td class="text-center" style="color: #16a34a; font-weight: 600;">Verified / Installed</td>
-            </tr>
-            `;
+        const notesHtml = [
+            order.description ? `<strong>Service Scope:</strong> ${esc(order.description)}` : '',
+            order.diagnosis ? `<strong>Diagnosis / Action:</strong> ${esc(order.diagnosis)}` : '',
+            `<strong>Work Order Summary:</strong> Parts: ${partsCount} item(s) | Labor: ${laborCount} service(s) | Status: ${esc((order.status || '').toUpperCase())}`,
+            `<strong>Technician:</strong> ${esc(order.mechanic?.name || '________________')} &nbsp;|&nbsp; <strong>Service Advisor:</strong> ${esc(order.advisor?.name || '________________')}`
+        ].filter(Boolean).join('<br>');
 
-            const catalogInclusions = getServiceInclusionsForItem(item);
-            const inclusionRows = catalogInclusions.map((inc) => `
-            <tr style="background: #f8fafc;">
-                <td class="text-center" style="color: #94a3b8; font-size: 10px;">↳</td>
-                <td style="padding-left: 20px;">
-                    <span style="color: #334155; font-weight: 500;">${inc.name}</span>
-                    <span style="display: inline-block; font-size: 8.5px; font-weight: 700; color: #047857; background: #d1fae5; border: 1px solid #6ee7b7; padding: 0.5px 5px; border-radius: 9999px; margin-left: 6px;">INCLUDED</span>
-                </td>
-                <td class="text-center" style="color: #64748b; font-size: 10px;">${(inc.item_type || 'INCLUSION').toUpperCase()}</td>
-                <td class="text-center" style="color: #64748b;">${inc.quantity}</td>
-                <td class="text-center" style="color: #047857; font-weight: 600; font-size: 10px;">Package Included</td>
-            </tr>
-            `).join('');
+        const html = buildInvoiceHtml({
+            ...getInvoiceBase(),
+            titleTop: 'SERVICE',
+            titleMain: 'INVOICE',
+            subtitle: '[ WORK ORDER & SERVICE RECORD ]',
+            siNo: srvInvNum,
+            saleType: null,
+            terms: '',
+            showAmounts: false,
+            notesHtml,
+            footerNote: 'This Service Invoice is an official technical record of services rendered and parts installed. No monetary amounts are stated.'
+        });
 
-            return itemRow + inclusionRows;
-        }).join('') : `<tr><td colspan="5" class="text-center">No parts or services recorded.</td></tr>`;
-
-        const html = `
-            <div class="invoice-header">
-                <div>
-                    <img src="/logo.png" class="brand-logo" alt="RADI8" />
-                </div>
-                <div class="doc-meta">
-                    <div class="doc-badge" style="color: #2563eb;">SERVICE INVOICE</div>
-                    <div style="font-size: 9px; font-weight: bold; color: #1d4ed8; margin-bottom: 4px;">[ WORK ORDER & SERVICE RECORD ]</div>
-                    <div class="doc-number"><strong>Service Inv #:</strong> ${srvInvNum}</div>
-                    <div class="doc-number"><strong>Date:</strong> ${now}</div>
-                    <div class="doc-number"><strong>JO #:</strong> ${order.order_number}</div>
-                </div>
-            </div>
-
-            <div class="info-grid">
-                <div class="info-card">
-                    <h4>Customer Details</h4>
-                    <p><strong>Name:</strong> ${order.customer?.full_name || 'Walk-in Customer'}</p>
-                    <p><strong>Contact:</strong> ${order.customer?.contact_number || 'N/A'}</p>
-                    <p><strong>Address:</strong> ${order.customer?.address || 'N/A'}</p>
-                </div>
-                <div class="info-card">
-                    <h4>Vehicle Details</h4>
-                    <p><strong>Plate No:</strong> ${order.vehicle?.plate_number || 'N/A'}</p>
-                    <p><strong>Model:</strong> ${order.vehicle?.brand || ''} ${order.vehicle?.model || ''} (${order.vehicle?.year || 'N/A'})</p>
-                    <p><strong>VIN:</strong> ${order.vehicle?.vin || 'N/A'}</p>
-                </div>
-            </div>
-
-            ${(order.description || order.diagnosis) ? `
-                <div class="banner-box" style="background: #f8fafc; border: 1px solid #e2e8f0;">
-                    <p style="margin: 2px 0;"><strong>Service Scope:</strong> ${order.description || 'General inspection & repair'}</p>
-                    ${order.diagnosis ? `<p style="margin: 2px 0;"><strong>Diagnosis / Action:</strong> ${order.diagnosis}</p>` : ''}
-                </div>
-            ` : ''}
-
-            <table class="items-table">
-                <thead>
-                    <tr>
-                        <th style="width: 30px;" class="text-center">#</th>
-                        <th>Part / Service Description</th>
-                        <th style="width: 80px;" class="text-center">Type</th>
-                        <th style="width: 50px;" class="text-center">Qty</th>
-                        <th style="width: 140px;" class="text-center">Verification Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${rows}
-                </tbody>
-            </table>
-
-            <div class="banner-box" style="background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: 25px;">
-                <strong>WORK ORDER SUMMARY:</strong> Total Parts: ${partsCount} item(s) | Labor Operations: ${laborCount} service(s) | Status: ${(order.status || '').toUpperCase()}
-            </div>
-
-            <div class="signatures">
-                <div class="signature-box">Technician: ${order.mechanic?.name || '___________________'}</div>
-                <div class="signature-box">Service Advisor: ${order.advisor?.name || '___________________'}</div>
-                <div class="signature-box">Customer Vehicle Acceptance</div>
-            </div>
-
-            <div class="footer-text">
-                * NOTE: This Service Invoice is an official technical record of services rendered and parts installed. No monetary amounts are stated.<br>
-                RADI8 System Generated Document
-            </div>
-        `;
-
-        printHtmlInvoice(`Service_Invoice_${order.order_number}`, html);
+        printInvoice(`Service_Invoice_${order.order_number}`, html);
     };
 
     const printCancelledInvoice = () => {
-        const now = new Date().toLocaleDateString();
         const voidInvNum = `INV-${(order.order_number || '').replace(/^JO-/, '')} (VOID)`;
-        const calculatedItemsTotal = orderItems.reduce((sum, item) => sum + parseFloat(item.total_price || (item.quantity * item.unit_price) || 0), 0);
-        const originalTotal = parseFloat(order.actual_cost || order.estimated_cost || calculatedItemsTotal || 0);
+        const originalTotal = parseFloat(order.actual_cost || order.estimated_cost || getBillableTotal() || 0);
 
-        const rows = orderItems.length > 0 ? orderItems.map((item, idx) => `
-            <tr>
-                <td class="text-center">${idx + 1}</td>
-                <td><strong>${item.description || 'N/A'} [VOID]</strong></td>
-                <td class="text-center">${(item.item_type || 'part').toUpperCase()}</td>
-                <td class="text-center">${item.quantity}</td>
-                <td class="text-right" style="color: #64748b; text-decoration: line-through;">Php ${parseFloat(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                <td class="text-right font-bold" style="color: #dc2626;">Php 0.00</td>
-            </tr>
-        `).join('') : `<tr><td colspan="6" class="text-center">No items recorded on this cancelled invoice.</td></tr>`;
+        const html = buildInvoiceHtml({
+            ...getInvoiceBase(),
+            titleTop: 'CANCELLED',
+            titleMain: 'INVOICE',
+            subtitle: '[ VOIDED - NO PAYMENT DUE ]',
+            siNo: voidInvNum,
+            saleType: null,
+            terms: 'VOID',
+            voided: true,
+            totals: { totalSales: originalTotal, totalDue: 0 },
+            notesHtml: `<strong>NOTICE OF INVOICE CANCELLATION:</strong> ${order.cancellation_reason ? `Reason: ${esc(order.cancellation_reason)}` : 'Reason: Order cancelled by authorized user.'}${order.cancelled_at ? ` | Cancelled on: ${new Date(order.cancelled_at).toLocaleString()}` : ''}`,
+            watermark: { text: 'VOID', color: '#dc2626' },
+            stamp: { text: 'CANCELLED', color: '#dc2626' },
+            footerNote: 'VOID TRANSACTION: This invoice is formally cancelled and invalidated. No liabilities or balances are outstanding.'
+        });
 
-        const html = `
-            <div class="invoice-header" style="border-bottom: 2px solid #fecaca; background: #fff5f5; padding: 12px; border-radius: 8px;">
-                <div>
-                    <img src="/logo.png" class="brand-logo" alt="RADI8" />
-                </div>
-                <div class="doc-meta">
-                    <div class="doc-badge" style="color: #dc2626;">CANCELLED INVOICE</div>
-                    <div style="font-size: 9px; font-weight: bold; color: #b91c1c; margin-bottom: 4px;">[ VOIDED - NO PAYMENT DUE ]</div>
-                    <div class="doc-number"><strong>Invoice #:</strong> ${voidInvNum}</div>
-                    <div class="doc-number"><strong>Date:</strong> ${now}</div>
-                    <div class="doc-number"><strong>JO #:</strong> ${order.order_number}</div>
-                </div>
-            </div>
-
-            <div class="banner-box" style="background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; margin-top: 14px;">
-                <p style="margin: 0; font-weight: bold;">NOTICE OF INVOICE CANCELLATION:</p>
-                <p style="margin: 3px 0 0 0; font-size: 10px;">
-                    ${order.cancellation_reason ? `Reason: ${order.cancellation_reason}` : 'Reason: Order cancelled by authorized user.'}
-                    ${order.cancelled_at ? ` | Cancelled on: ${new Date(order.cancelled_at).toLocaleString()}` : ''}
-                </p>
-            </div>
-
-            <div class="info-grid">
-                <div class="info-card">
-                    <h4>Customer Details</h4>
-                    <p><strong>Name:</strong> ${order.customer?.full_name || 'Walk-in Customer'}</p>
-                    <p><strong>Contact:</strong> ${order.customer?.contact_number || 'N/A'}</p>
-                    <p><strong>Address:</strong> ${order.customer?.address || 'N/A'}</p>
-                </div>
-                <div class="info-card">
-                    <h4>Vehicle Details</h4>
-                    <p><strong>Plate No:</strong> ${order.vehicle?.plate_number || 'N/A'}</p>
-                    <p><strong>Model:</strong> ${order.vehicle?.brand || ''} ${order.vehicle?.model || ''} (${order.vehicle?.year || 'N/A'})</p>
-                    <p><strong>VIN:</strong> ${order.vehicle?.vin || 'N/A'}</p>
-                </div>
-            </div>
-
-            <table class="items-table">
-                <thead>
-                    <tr style="background: #475569;">
-                        <th style="width: 30px;" class="text-center">#</th>
-                        <th>Item / Service Description</th>
-                        <th style="width: 70px;" class="text-center">Type</th>
-                        <th style="width: 50px;" class="text-center">Qty</th>
-                        <th style="width: 110px;" class="text-right">Original Unit Price</th>
-                        <th style="width: 100px;" class="text-right">Amount Due</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${rows}
-                </tbody>
-            </table>
-
-            <div class="totals-box" style="background: #fef2f2; border: 1px solid #fecaca;">
-                <div class="total-line" style="color: #991b1b;">
-                    <span>ORIGINAL AMOUNT:</span>
-                    <span>Php ${originalTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div class="total-line" style="color: #991b1b; font-weight: bold;">
-                    <span>STATUS:</span>
-                    <span>CANCELLED / VOID</span>
-                </div>
-                <div class="total-line grand-total" style="color: #dc2626;">
-                    <span>AMOUNT DUE:</span>
-                    <span>Php 0.00</span>
-                </div>
-            </div>
-
-            <div class="signatures">
-                <div class="signature-box">Authorized Cancellation / Supervisor</div>
-                <div class="signature-box">Customer Notification / Conforme</div>
-            </div>
-
-            <div class="footer-text">
-                * VOID TRANSACTION: This invoice is formally cancelled and invalidated. No liabilities or balances are outstanding.<br>
-                RADI8 System Generated Void Record
-            </div>
-        `;
-
-        printHtmlInvoice(`Cancelled_Invoice_${order.order_number}`, html);
+        printInvoice(`Cancelled_Invoice_${order.order_number}`, html);
     };
 
     if (loading) return <div className="p-8 text-white text-center">Loading job order...</div>;
