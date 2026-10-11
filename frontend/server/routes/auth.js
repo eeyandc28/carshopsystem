@@ -23,7 +23,18 @@ router.post('/login', async (req, res) => {
             .ilike('email', email.toLowerCase().trim())
             .single();
 
-        if (error || !user) {
+        if (error) {
+            console.error('Supabase auth error:', error);
+            // PGRST116 means zero rows returned (i.e. user not found with that email)
+            if (error.code !== 'PGRST116') {
+                return res.status(503).json({
+                    message: 'Database service is unreachable. Please verify your Supabase project status or credentials.'
+                });
+            }
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        if (!user) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
