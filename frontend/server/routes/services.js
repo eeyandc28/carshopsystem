@@ -38,24 +38,37 @@ router.post('/', async (req, res) => {
             return res.status(422).json({ message: 'Service name is required' });
         }
 
-        const { data, error } = await supabase
+        const basePayload = {
+            name: name.trim(),
+            code: code ? code.trim() : null,
+            type: type ? type.trim() : null,
+            keyword: keyword ? keyword.trim() : null,
+            description: description ? description.trim() : null,
+            price: parseFloat(price) || 0.00,
+            is_active: is_active !== undefined ? Boolean(is_active) : true
+        };
+
+        let result = await supabase
             .from('services')
             .insert({
-                name: name.trim(),
-                code: code ? code.trim() : null,
-                type: type ? type.trim() : null,
-                keyword: keyword ? keyword.trim() : null,
-                description: description ? description.trim() : null,
-                inclusions: Array.isArray(inclusions) ? inclusions : [],
-                price: parseFloat(price) || 0.00,
-                is_active: is_active !== undefined ? Boolean(is_active) : true
+                ...basePayload,
+                inclusions: Array.isArray(inclusions) ? inclusions : []
             })
             .select()
             .single();
 
-        if (error) throw error;
+        // If the 'inclusions' column is not yet present in the Supabase schema cache, retry without it
+        if (result.error && (result.error.code === 'PGRST204' || result.error.message?.includes('inclusions'))) {
+            result = await supabase
+                .from('services')
+                .insert(basePayload)
+                .select()
+                .single();
+        }
 
-        res.status(201).json({ data });
+        if (result.error) throw result.error;
+
+        res.status(201).json({ data: result.data });
     } catch (err) {
         res.status(500).json({ message: 'Failed to create service', error: err.message });
     }
@@ -72,20 +85,32 @@ router.put('/:id', async (req, res) => {
         if (type !== undefined) updates.type = type ? type.trim() : null;
         if (keyword !== undefined) updates.keyword = keyword ? keyword.trim() : null;
         if (description !== undefined) updates.description = description ? description.trim() : null;
-        if (inclusions !== undefined) updates.inclusions = Array.isArray(inclusions) ? inclusions : [];
         if (price !== undefined) updates.price = parseFloat(price) || 0.00;
         if (is_active !== undefined) updates.is_active = Boolean(is_active);
 
-        const { data, error } = await supabase
+        let result = await supabase
             .from('services')
-            .update(updates)
+            .update({
+                ...updates,
+                ...(inclusions !== undefined ? { inclusions: Array.isArray(inclusions) ? inclusions : [] } : {})
+            })
             .eq('id', req.params.id)
             .select()
             .single();
 
-        if (error) throw error;
+        // If 'inclusions' column is not yet present in Supabase schema cache, retry update without it
+        if (result.error && (result.error.code === 'PGRST204' || result.error.message?.includes('inclusions'))) {
+            result = await supabase
+                .from('services')
+                .update(updates)
+                .eq('id', req.params.id)
+                .select()
+                .single();
+        }
 
-        res.json({ data });
+        if (result.error) throw result.error;
+
+        res.json({ data: result.data });
     } catch (err) {
         res.status(500).json({ message: 'Failed to update service', error: err.message });
     }

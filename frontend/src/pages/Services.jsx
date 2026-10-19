@@ -533,7 +533,7 @@ const Services = () => {
             closeModal();
             fetchServices();
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to save service.');
+            setError(err.response?.data?.error || err.response?.data?.message || 'Failed to save service.');
         } finally {
             setSaving(false);
         }
