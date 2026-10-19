@@ -1,9 +1,9 @@
 // ==============================================================================
 // CarShop Management System - Service Worker
-// Version: carshop-v1.0.0
+// Version: carshop-v1.0.2
 // ==============================================================================
 
-const SW_VERSION = 'carshop-v1.0.0';
+const SW_VERSION = 'carshop-v1.0.2';
 const STATIC_CACHE_NAME = `static-${SW_VERSION}`;
 const PAGES_CACHE_NAME = `pages-${SW_VERSION}`;
 
@@ -25,9 +25,10 @@ const PRECACHE_ASSETS = [
 ];
 
 // ------------------------------------------------------------------------------
-// 1. INSTALL EVENT: Pre-cache static shell & offline fallback
+// 1. INSTALL EVENT: Pre-cache static shell & offline fallback, skip waiting
 // ------------------------------------------------------------------------------
 self.addEventListener('install', (event) => {
+    self.skipWaiting();
     event.waitUntil(
         caches.open(STATIC_CACHE_NAME).then((cache) => {
             return cache.addAll(PRECACHE_ASSETS).catch((err) => {
@@ -45,10 +46,7 @@ self.addEventListener('activate', (event) => {
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((cacheName) => {
-                    if (
-                        cacheName.startsWith('static-') && cacheName !== STATIC_CACHE_NAME ||
-                        cacheName.startsWith('pages-') && cacheName !== PAGES_CACHE_NAME
-                    ) {
+                    if (cacheName !== STATIC_CACHE_NAME && cacheName !== PAGES_CACHE_NAME) {
                         return caches.delete(cacheName);
                     }
                 })
@@ -139,17 +137,15 @@ self.addEventListener('fetch', (event) => {
 
     if (isStaticAsset) {
         event.respondWith(
-            caches.match(request).then((cachedResponse) => {
-                const fetchPromise = fetch(request).then((networkResponse) => {
+            fetch(request)
+                .then((networkResponse) => {
                     if (networkResponse && networkResponse.status === 200) {
                         const copy = networkResponse.clone();
                         caches.open(STATIC_CACHE_NAME).then((cache) => cache.put(request, copy));
                     }
                     return networkResponse;
-                }).catch(() => null);
-
-                return cachedResponse || fetchPromise;
-            })
+                })
+                .catch(() => caches.match(request))
         );
         return;
     }
