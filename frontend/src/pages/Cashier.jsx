@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import useAuthStore from '../store/authStore';
 import { 
     BanknotesIcon, 
     CheckCircleIcon, 
@@ -9,10 +10,10 @@ import {
     TagIcon,
     PrinterIcon
 } from '@heroicons/react/24/outline';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { buildPaymentReceiptHtml, openPaymentReceipt } from '../utils/paymentReceiptTemplate';
 
 export default function Cashier() {
+    const { user } = useAuthStore();
     const [jobOrders, setJobOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -100,7 +101,7 @@ export default function Cashier() {
             });
 
             // Auto print receipt
-            printReceipt(selectedOrder, amount, paymentMethod, discVal);
+            await printReceipt(selectedOrder, amount, paymentMethod, discVal, reference);
 
             setShowPaymentModal(false);
             fetchUnpaidOrders(); // refresh list
@@ -112,49 +113,54 @@ export default function Cashier() {
         }
     };
 
-    const printReceipt = (order, amountPaid, method, appliedDiscount = 0) => {
-        const doc = new jsPDF();
-        
-        const total = parseFloat(order.actual_cost) || 0;
+    const printReceipt = async (order, amountPaid = 0, method = 'Cash', appliedDiscount = 0, refNo = '') => {
+        let items = [];
+        try {
+            const itemsRes = await api.get(`/job-orders/${order.id}/items`);
+            if (itemsRes.data?.data && Array.isArray(itemsRes.data.data)) {
+                items = itemsRes.data.data.map(item => ({
+                    description: item.description || 'Service / Part item',
+                    quantity: parseFloat(item.quantity) || 1,
+                    unitPrice: parseFloat(item.unit_price) || 0,
+                    amount: parseFloat(item.total_price || (item.quantity * item.unit_price)) || 0,
+                    included: (parseFloat(item.unit_price || 0) === 0) && (item.description || '').toLowerCase().includes('included')
+                }));
+            }
+        } catch (err) {
+            console.warn('Could not load order items for receipt, fallback to summary', err);
+        }
+
+        const total = parseFloat(order.actual_cost || order.estimated_cost) || 0;
         const prevDisc = parseFloat(order.discount) || 0;
-        const totalDisc = prevDisc + (appliedDiscount || 0);
+        const totalDisc = prevDisc + (parseFloat(appliedDiscount) || 0);
         const prevPaid = parseFloat(order.amount_paid) || 0;
+        const paidNow = parseFloat(amountPaid) || 0;
         const netTotal = Math.max(0, total - totalDisc);
-        const remaining = Math.max(0, netTotal - (prevPaid + amountPaid));
+        const remaining = Math.max(0, netTotal - (prevPaid + paidNow));
 
-        doc.setFontSize(20);
-        doc.setFont("helvetica", "bold");
-        doc.text('PAYMENT RECEIPT', 105, 20, { align: 'center' });
-        
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Date: ${new Date().toLocaleDateString()}`, 150, 30);
-        doc.text(`Job Order: ${order.job_order_number}`, 15, 30);
-        doc.text(`Customer: ${order.vehicle?.customer?.full_name || 'Walk-in'}`, 15, 36);
-        doc.text(`Vehicle: ${order.vehicle?.plate_number || 'N/A'}`, 15, 42);
+        const cleanJoNumber = (order.job_order_number || '').replace(/^JO-/, '');
+        const siNum = `SI-${cleanJoNumber}`;
+        const poNum = order.job_order_number || '';
 
-        autoTable(doc, {
-            startY: 50,
-            head: [['Description', 'Amount']],
-            body: [
-                ['Total Bill', `PHP ${total.toLocaleString()}`],
-                ['Discount', `PHP ${totalDisc.toLocaleString()}`],
-                ['Net Total', `PHP ${netTotal.toLocaleString()}`],
-                ['Previous Payments', `PHP ${prevPaid.toLocaleString()}`],
-                ['Amount Paid Now', `PHP ${parseFloat(amountPaid).toLocaleString()}`],
-                ['Remaining Balance', `PHP ${remaining.toLocaleString()}`],
-                ['Payment Method', method],
-            ],
-            theme: 'grid',
-            headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-            styles: { fontSize: 10, cellPadding: 5 }
+        const receiptHtml = buildPaymentReceiptHtml({
+            siNo: siNum,
+            date: new Date().toLocaleDateString(),
+            poNo: poNum,
+            paymentMethod: method || 'Cash',
+            customer: order.vehicle?.customer || order.customer || {},
+            vehicle: order.vehicle || {},
+            terms: method || 'Cash',
+            items: items,
+            totalBill: total,
+            discount: totalDisc,
+            withholding: 0,
+            amountPaid: prevPaid + paidNow,
+            amountPaidNow: paidNow,
+            remainingBalance: remaining,
+            receivedBy: user?.name || 'Cashier'
         });
 
-        const finalY = (doc.lastAutoTable?.finalY) || 120;
-        doc.setFont("helvetica", "italic");
-        doc.text('Thank you for your business!', 105, finalY + 10, { align: 'center' });
-
-        window.open(doc.output('bloburl'), '_blank');
+        openPaymentReceipt(receiptHtml, `Payment_Receipt_${siNum}`);
     };
 
     const pendingCount = jobOrders.filter(o => o.payment_status !== 'paid').length;
@@ -327,7 +333,7 @@ export default function Cashier() {
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 {isPaid ? (
                                                     <button
-                                                        onClick={() => printReceipt(order, 0, 'Cash', 0)}
+                                                        onClick={() => printReceipt(order, 0, order.payments?.[order.payments.length - 1]?.payment_method || 'Cash', 0)}
                                                         className="inline-flex items-center px-3.5 py-1.5 bg-slate-800 text-slate-300 border border-slate-700 rounded-xl hover:bg-slate-700 hover:text-white transition-colors"
                                                     >
                                                         <PrinterIcon className="h-4 w-4 mr-1.5" />
