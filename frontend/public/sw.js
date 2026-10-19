@@ -1,9 +1,9 @@
 // ==============================================================================
 // CarShop Management System - Service Worker
-// Version: carshop-v1.0.2
+// Version: carshop-v1.0.3
 // ==============================================================================
 
-const SW_VERSION = 'carshop-v1.0.2';
+const SW_VERSION = 'carshop-v1.0.3';
 const STATIC_CACHE_NAME = `static-${SW_VERSION}`;
 const PAGES_CACHE_NAME = `pages-${SW_VERSION}`;
 
