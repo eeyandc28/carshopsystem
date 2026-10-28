@@ -366,6 +366,59 @@ const JobOrderDetails = () => {
         });
     };
 
+    // Splits order items into package lines (parent + its inclusions) and standalone charges not covered by any package
+    const groupOrderItems = () => {
+        const groups = [];
+        const orphans = [];
+        let last = null;
+
+        (orderItems || []).forEach((item) => {
+            if (isItemInclusion(item)) {
+                const m = (item.description || '').match(/\(Included with (.+)\)\s*$/i);
+                const parentName = m ? m[1].trim().toLowerCase() : null;
+                const target = (parentName && groups.find(g => (g.item.description || '').trim().toLowerCase() === parentName)) || last;
+                if (target) target.children.push(item);
+                else orphans.push(item);
+            } else {
+                last = { item, children: [] };
+                groups.push(last);
+            }
+        });
+
+        const isPackage = (g) => g.children.length > 0 || getServiceInclusionsForItem(g.item).length > 0;
+        return {
+            orphans,
+            packages: groups.filter(isPackage),
+            suggested: groups.filter(g => !isPackage(g)).map(g => g.item)
+        };
+    };
+
+    // Renders invoice rows: packages first, then a "Suggested" section listing charges not included in the package
+    const renderGroupedRows = (colSpan, renderFn) => {
+        const { orphans, packages, suggested } = groupOrderItems();
+        if (packages.length === 0) {
+            return (orderItems || []).map(renderFn).join('');
+        }
+
+        let html = orphans.map(renderFn).join('');
+        packages.forEach((p) => {
+            html += renderFn(p.item);
+            html += p.children.map(renderFn).join('');
+        });
+
+        if (suggested.length > 0) {
+            html += `
+            <tr>
+                <td colspan="${colSpan}" style="background: #fffbeb; border-top: 2px solid #f59e0b; padding: 8px 10px;">
+                    <div style="font-size: 11px; font-weight: 800; color: #b45309; letter-spacing: 1px; text-transform: uppercase;">Suggested</div>
+                    <div style="font-size: 9px; color: #92400e; margin-top: 1px;">Additional charges not included in the package</div>
+                </td>
+            </tr>`;
+            html += suggested.map(renderFn).join('');
+        }
+        return html;
+    };
+
     const printHtmlInvoice = (title, contentHtml) => {
         let iframe = document.getElementById('carshop-print-iframe');
         if (!iframe) {
@@ -580,7 +633,7 @@ const JobOrderDetails = () => {
         const balanceDue = isPaid ? 0 : Math.max(0, netTotal - paidAmount);
 
         let rowCount = 0;
-        const rows = orderItems.length > 0 ? orderItems.map((item) => {
+        const rows = orderItems.length > 0 ? renderGroupedRows(5, (item) => {
             const isIncluded = isItemInclusion(item);
             if (!isIncluded) rowCount++;
             const itemRow = `
@@ -611,7 +664,7 @@ const JobOrderDetails = () => {
             `).join('');
 
             return itemRow + inclusionRows;
-        }).join('') : `<tr><td colspan="5" class="text-center">No parts or services recorded.</td></tr>`;
+        }) : `<tr><td colspan="5" class="text-center">No parts or services recorded.</td></tr>`;
 
         const html = `
             <div class="invoice-header">
@@ -722,7 +775,7 @@ const JobOrderDetails = () => {
         const finalTotal = calculatedItemsTotal;
 
         let tempRowCount = 0;
-        const rows = orderItems.length > 0 ? orderItems.map((item) => {
+        const rows = orderItems.length > 0 ? renderGroupedRows(5, (item) => {
             const isIncluded = isItemInclusion(item);
             if (!isIncluded) tempRowCount++;
             const itemRow = `
@@ -753,7 +806,7 @@ const JobOrderDetails = () => {
             `).join('');
 
             return itemRow + inclusionRows;
-        }).join('') : `<tr><td colspan="5" class="text-center">No parts or services recorded.</td></tr>`;
+        }) : `<tr><td colspan="5" class="text-center">No parts or services recorded.</td></tr>`;
 
         const html = `
             <div class="invoice-header">
@@ -831,7 +884,7 @@ const JobOrderDetails = () => {
         const laborCount = orderItems.filter(i => (i.item_type || 'part') !== 'part').length;
 
         let rowIdx = 0;
-        const rows = orderItems.length > 0 ? orderItems.map((item) => {
+        const rows = orderItems.length > 0 ? renderGroupedRows(5, (item) => {
             const isIncluded = isItemInclusion(item);
             if (!isIncluded) rowIdx++;
             const itemRow = `
@@ -862,7 +915,7 @@ const JobOrderDetails = () => {
             `).join('');
 
             return itemRow + inclusionRows;
-        }).join('') : `<tr><td colspan="5" class="text-center">No parts or services recorded.</td></tr>`;
+        }) : `<tr><td colspan="5" class="text-center">No parts or services recorded.</td></tr>`;
 
         const html = `
             <div class="invoice-header">
